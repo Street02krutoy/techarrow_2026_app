@@ -54,12 +54,10 @@ class QuestCreationStepFourPage extends StatelessWidget {
                     point: LatLng(point.latitude, point.longitude),
                     width: 44,
                     height: 44,
-                    rotate: true,
                     child: GestureDetector(
                       onTap: () => onCheckpointTap(index),
-                      child: Icon(
-                        Icons.location_on,
-                        size: 40,
+                      child: _NumberedCheckpointMarker(
+                        number: index + 1,
                         color: colorScheme.error,
                       ),
                     ),
@@ -178,8 +176,9 @@ class QuestCreationStepFourPage extends StatelessWidget {
                                 ),
                               ),
                               onPressed: isReady
-                                  ? () =>
-                                        changePage(QuestCreationPageStatus.stepFive)
+                                  ? () => changePage(
+                                      QuestCreationPageStatus.stepFive,
+                                    )
                                   : null,
                               child: Text(
                                 'Продолжить',
@@ -199,6 +198,43 @@ class QuestCreationStepFourPage extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _NumberedCheckpointMarker extends StatelessWidget {
+  const _NumberedCheckpointMarker({required this.number, required this.color});
+
+  final int number;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.topCenter,
+      children: [
+        Icon(Icons.location_on, size: 44, color: color),
+        Positioned(
+          top: 6,
+          child: Container(
+            width: 20,
+            height: 20,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              number.toString(),
+              style: const TextStyle(
+                color: Colors.black,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

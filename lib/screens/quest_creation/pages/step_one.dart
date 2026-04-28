@@ -23,17 +23,43 @@ class QuestCreationStepOnePage extends StatefulWidget {
 }
 
 class _QuestCreationStepOnePageState extends State<QuestCreationStepOnePage> {
+  static const int _minTitleLength = 5;
+
   bool get _canProceed =>
-      widget.titleController.text.trim().isNotEmpty &&
+      widget.titleController.text.trim().length >= _minTitleLength &&
       widget.locationController.text.trim().isNotEmpty &&
-      widget.difficultyController.text.trim().isNotEmpty &&
-      widget.durationController.text.trim().isNotEmpty;
+      _selectedDifficulty != null &&
+      (_durationMinutes ?? 0) > 0;
+
+  int? get _selectedDifficulty {
+    final value = int.tryParse(widget.difficultyController.text.trim());
+    if (value == null || value < 1 || value > 5) return null;
+    return value;
+  }
+
+  int? get _durationMinutes =>
+      int.tryParse(widget.durationController.text.trim());
+
+  String? get _titleError {
+    final title = widget.titleController.text.trim();
+    if (title.isEmpty || title.length >= _minTitleLength) return null;
+    return 'Название должно быть не менее $_minTitleLength символов';
+  }
+
+  String? get _durationError {
+    final text = widget.durationController.text.trim();
+    if (text.isEmpty) return null;
+    final value = int.tryParse(text);
+    if (value != null && value > 0) return null;
+    return 'Введите длительность больше 0';
+  }
 
   @override
   void initState() {
     super.initState();
     widget.titleController.addListener(_refresh);
     widget.locationController.addListener(_refresh);
+    widget.difficultyController.addListener(_refresh);
     widget.durationController.addListener(_refresh);
   }
 
@@ -41,6 +67,7 @@ class _QuestCreationStepOnePageState extends State<QuestCreationStepOnePage> {
   void dispose() {
     widget.titleController.removeListener(_refresh);
     widget.locationController.removeListener(_refresh);
+    widget.difficultyController.removeListener(_refresh);
     widget.durationController.removeListener(_refresh);
     super.dispose();
   }
@@ -49,10 +76,15 @@ class _QuestCreationStepOnePageState extends State<QuestCreationStepOnePage> {
     if (mounted) setState(() {});
   }
 
-  InputDecoration _fieldDecoration(BuildContext context, {String? hint}) {
+  InputDecoration _fieldDecoration(
+    BuildContext context, {
+    String? hint,
+    String? errorText,
+  }) {
     final colorScheme = Theme.of(context).colorScheme;
     return InputDecoration(
       hintText: hint,
+      errorText: errorText,
       filled: true,
       fillColor: colorScheme.surfaceContainer,
       border: OutlineInputBorder(
@@ -88,13 +120,10 @@ class _QuestCreationStepOnePageState extends State<QuestCreationStepOnePage> {
   Widget _difficultyDropdown(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final currentValue = int.tryParse(widget.difficultyController.text.trim());
+    final currentValue = _selectedDifficulty;
 
     return DropdownButtonFormField<int>(
-      initialValue:
-          currentValue != null && currentValue >= 1 && currentValue <= 5
-          ? currentValue
-          : null,
+      initialValue: currentValue,
       decoration: _fieldDecoration(context, hint: 'Выберите сложность'),
       dropdownColor: colorScheme.surface,
       borderRadius: BorderRadius.circular(16),
@@ -184,6 +213,7 @@ class _QuestCreationStepOnePageState extends State<QuestCreationStepOnePage> {
                         decoration: _fieldDecoration(
                           context,
                           hint: 'Введите название',
+                          errorText: _titleError,
                         ),
                       ),
                       const SizedBox(height: 14),
@@ -206,6 +236,7 @@ class _QuestCreationStepOnePageState extends State<QuestCreationStepOnePage> {
                         decoration: _fieldDecoration(
                           context,
                           hint: 'Введите длительность в минутах',
+                          errorText: _durationError,
                         ),
                       ),
                       const Spacer(),

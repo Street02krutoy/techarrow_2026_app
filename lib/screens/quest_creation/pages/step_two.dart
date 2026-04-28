@@ -26,7 +26,18 @@ class QuestCreationStepTwoPage extends StatefulWidget {
 }
 
 class _QuestCreationStepTwoPageState extends State<QuestCreationStepTwoPage> {
-  bool get _canProceed => widget.descriptionController.text.trim().isNotEmpty;
+  static const int _minDescriptionLength = 30;
+
+  bool get _canProceed =>
+      widget.descriptionController.text.trim().length >= _minDescriptionLength;
+
+  String? get _descriptionError {
+    final description = widget.descriptionController.text.trim();
+    if (description.isEmpty || description.length >= _minDescriptionLength) {
+      return null;
+    }
+    return 'Описание должно быть не менее $_minDescriptionLength символов';
+  }
 
   @override
   void initState() {
@@ -44,10 +55,15 @@ class _QuestCreationStepTwoPageState extends State<QuestCreationStepTwoPage> {
     if (mounted) setState(() {});
   }
 
-  InputDecoration _fieldDecoration(BuildContext context, {String? hint}) {
+  InputDecoration _fieldDecoration(
+    BuildContext context, {
+    String? hint,
+    String? errorText,
+  }) {
     final colorScheme = Theme.of(context).colorScheme;
     return InputDecoration(
       hintText: hint,
+      errorText: errorText,
       filled: true,
       fillColor: colorScheme.surfaceContainer,
       border: OutlineInputBorder(
@@ -153,6 +169,7 @@ class _QuestCreationStepTwoPageState extends State<QuestCreationStepTwoPage> {
                         decoration: _fieldDecoration(
                           context,
                           hint: 'Введите описание квеста',
+                          errorText: _descriptionError,
                         ),
                       ),
                       const SizedBox(height: 14),

@@ -19,6 +19,7 @@ class _AchievementsScreenState extends State<AchievementsScreen>
   final ScrollController _scrollController = ScrollController();
 
   final List<_AchievementItem> _items = <_AchievementItem>[];
+  final Map<int, DateTime> _awardedDatesById = <int, DateTime>{};
   _AchievementsTab _activeTab = _AchievementsTab.mine;
   int _offset = 0;
   int _total = 0;
@@ -122,6 +123,10 @@ class _AchievementsScreenState extends State<AchievementsScreen>
           throw Exception('Failed to load user achievements');
         }
 
+        for (final item in body.items) {
+          _awardedDatesById[item.id] = item.awardedAt;
+        }
+
         return _AchievementPage(
           items: body.items
               .map(
@@ -146,13 +151,46 @@ class _AchievementsScreenState extends State<AchievementsScreen>
         if (!response.isSuccessful || body == null) {
           throw Exception('Failed to load achievements');
         }
+        final awardedDatesById = await _loadAwardedAchievementDates();
 
         return _AchievementPage(
-          items: body.items.map(_AchievementItem.fromResponse).toList(),
+          items: body.items
+              .map(
+                (item) => _AchievementItem.fromResponse(
+                  item,
+                  awardedAt: awardedDatesById[item.id],
+                ),
+              )
+              .toList(),
           total: body.total,
           offset: body.offset,
         );
     }
+  }
+
+  Future<Map<int, DateTime>> _loadAwardedAchievementDates() async {
+    const limit = 100;
+    var offset = 0;
+
+    do {
+      final response = await ApiService.instance.client.apiAchievementsMeGet(
+        limit: limit,
+        offset: offset,
+      );
+      final body = response.body;
+      if (!response.isSuccessful || body == null) {
+        throw Exception('Failed to load user achievements');
+      }
+
+      for (final item in body.items) {
+        _awardedDatesById[item.id] = item.awardedAt;
+      }
+
+      offset = body.offset + body.items.length;
+      if (offset >= body.total || body.items.isEmpty) break;
+    } while (true);
+
+    return _awardedDatesById;
   }
 
   @override
@@ -270,13 +308,16 @@ class _AchievementItem {
     required this.awardedAt,
   });
 
-  factory _AchievementItem.fromResponse(AchievementResponse response) {
+  factory _AchievementItem.fromResponse(
+    AchievementResponse response, {
+    DateTime? awardedAt,
+  }) {
     return _AchievementItem(
       id: response.id,
       title: response.title,
       description: response.description,
       imageFileId: response.imageFileId,
-      awardedAt: null,
+      awardedAt: awardedAt,
     );
   }
 

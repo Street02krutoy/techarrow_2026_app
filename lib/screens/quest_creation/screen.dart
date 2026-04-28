@@ -29,6 +29,11 @@ class QuestCreationScreen extends StatefulWidget {
 }
 
 class _QuestCreationScreenState extends State<QuestCreationScreen> {
+  static const int _minTitleLength = 5;
+  static const int _minDescriptionLength = 30;
+  static const int _minCheckpointsCount = 3;
+  static const int _minCheckpointTaskLength = 20;
+
   QuestCreationPageStatus status = QuestCreationPageStatus.stepOne;
   int checkpointsCount = 0;
   final List<QuestDraftCheckpoint> _checkpoints = [];
@@ -94,6 +99,12 @@ class _QuestCreationScreenState extends State<QuestCreationScreen> {
 
   void onCheckpointSaved() {
     if (_selectedPoint == null) return;
+    if (_pointTitleController.text.trim().isEmpty ||
+        _pointTaskController.text.trim().length < _minCheckpointTaskLength ||
+        _pointCodeWordController.text.trim().isEmpty ||
+        _pointRulesController.text.trim().isEmpty) {
+      return;
+    }
 
     final next = QuestDraftCheckpoint(
       title: _pointTitleController.text.trim(),
@@ -185,6 +196,8 @@ class _QuestCreationScreenState extends State<QuestCreationScreen> {
 
   Future<void> _submitQuest() async {
     if (_isSubmitting) return;
+    if (!_validateBeforeSubmit()) return;
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
@@ -216,7 +229,7 @@ class _QuestCreationScreenState extends State<QuestCreationScreen> {
               'task': point.task,
               'correct_answer': point.correctAnswer,
               'hint': point.hint.isEmpty ? null : point.hint,
-              'point_rules': point.pointRules.isEmpty ? null : point.pointRules,
+              'point_rules': point.pointRules,
               'latitude': point.latitude,
               'longitude': point.longitude,
             },
@@ -263,6 +276,89 @@ class _QuestCreationScreenState extends State<QuestCreationScreen> {
         });
       }
     }
+  }
+
+  bool _validateBeforeSubmit() {
+    final title = _titleController.text.trim();
+    if (title.length < _minTitleLength) {
+      _showValidationError(
+        'Название должно быть не менее $_minTitleLength символов',
+        QuestCreationPageStatus.stepOne,
+      );
+      return false;
+    }
+
+    if (_locationController.text.trim().isEmpty) {
+      _showValidationError(
+        'Укажите район или город',
+        QuestCreationPageStatus.stepOne,
+      );
+      return false;
+    }
+
+    final difficulty = int.tryParse(_difficultyController.text.trim());
+    if (difficulty == null || difficulty < 1 || difficulty > 5) {
+      _showValidationError(
+        'Выберите сложность',
+        QuestCreationPageStatus.stepOne,
+      );
+      return false;
+    }
+
+    final duration = int.tryParse(_durationController.text.trim());
+    if (duration == null || duration <= 0) {
+      _showValidationError(
+        'Введите длительность больше 0',
+        QuestCreationPageStatus.stepOne,
+      );
+      return false;
+    }
+
+    final description = _descriptionController.text.trim();
+    if (description.length < _minDescriptionLength) {
+      _showValidationError(
+        'Описание должно быть не менее $_minDescriptionLength символов',
+        QuestCreationPageStatus.stepTwo,
+      );
+      return false;
+    }
+
+    if (_checkpoints.length < _minCheckpointsCount) {
+      _showValidationError(
+        'Добавьте не менее $_minCheckpointsCount чекпоинтов',
+        QuestCreationPageStatus.stepFour,
+      );
+      return false;
+    }
+
+    final hasInvalidCheckpoint = _checkpoints.any(
+      (point) =>
+          point.title.trim().isEmpty ||
+          point.task.trim().length < _minCheckpointTaskLength ||
+          point.correctAnswer.trim().isEmpty ||
+          point.pointRules.trim().isEmpty,
+    );
+    if (hasInvalidCheckpoint) {
+      _showValidationError(
+        'Заполните название, задание от $_minCheckpointTaskLength символов, кодовое слово и правила у каждого чекпоинта',
+        QuestCreationPageStatus.stepFour,
+      );
+      return false;
+    }
+
+    return true;
+  }
+
+  void _showValidationError(
+    String message,
+    QuestCreationPageStatus targetStep,
+  ) {
+    setState(() {
+      status = targetStep;
+    });
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override

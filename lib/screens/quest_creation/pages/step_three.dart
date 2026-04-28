@@ -40,17 +40,58 @@ class _QuestCreationStepThreePageState
     extends State<QuestCreationStepThreePage> {
   static const LatLng _cityCenter = LatLng(56.3269, 44.0065);
   static const double _sheetContentHeight = 600;
+  static const int _minTaskLength = 20;
   bool _didDismissSheet = false;
+
+  bool get _canSave =>
+      widget.selectedPoint != null &&
+      widget.pointTitleController.text.trim().isNotEmpty &&
+      widget.taskController.text.trim().length >= _minTaskLength &&
+      widget.codeWordController.text.trim().isNotEmpty &&
+      widget.pointRulesController.text.trim().isNotEmpty;
+
+  String? get _taskError {
+    final task = widget.taskController.text.trim();
+    if (task.isEmpty || task.length >= _minTaskLength) return null;
+    return 'Задание должно быть не менее $_minTaskLength символов';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    widget.pointTitleController.addListener(_refresh);
+    widget.taskController.addListener(_refresh);
+    widget.codeWordController.addListener(_refresh);
+    widget.pointRulesController.addListener(_refresh);
+  }
+
+  @override
+  void dispose() {
+    widget.pointTitleController.removeListener(_refresh);
+    widget.taskController.removeListener(_refresh);
+    widget.codeWordController.removeListener(_refresh);
+    widget.pointRulesController.removeListener(_refresh);
+    super.dispose();
+  }
+
+  void _refresh() {
+    if (mounted) setState(() {});
+  }
 
   double _sheetMaxSize(double availableHeight) {
     if (availableHeight <= 0) return 0.8;
     return (_sheetContentHeight / availableHeight).clamp(0.28, 0.8);
   }
 
-  InputDecoration _fieldDecoration(BuildContext context, {String? hint}) {
+  InputDecoration _fieldDecoration(
+    BuildContext context, {
+    String? hint,
+    String? errorText,
+  }) {
     final colorScheme = Theme.of(context).colorScheme;
     return InputDecoration(
       hintText: hint,
+      errorText: errorText,
       filled: true,
       fillColor: colorScheme.surfaceContainer,
       border: OutlineInputBorder(
@@ -113,7 +154,6 @@ class _QuestCreationStepThreePageState
                       point: widget.selectedPoint!,
                       width: 36,
                       height: 36,
-                      rotate: true,
                       child: Icon(
                         Icons.location_on,
                         size: 36,
@@ -188,6 +228,7 @@ class _QuestCreationStepThreePageState
                               decoration: _fieldDecoration(
                                 context,
                                 hint: 'Введите задание для точки',
+                                errorText: _taskError,
                               ),
                             ),
                             const SizedBox(height: 12),
@@ -231,7 +272,7 @@ class _QuestCreationStepThreePageState
                                     borderRadius: BorderRadius.circular(26),
                                   ),
                                 ),
-                                onPressed: hasSelectedPoint
+                                onPressed: _canSave
                                     ? widget.onCheckpointSaved
                                     : null,
                                 child: Text(
