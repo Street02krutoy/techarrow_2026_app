@@ -1,7 +1,8 @@
+import 'package:bottom_picker/bottom_picker.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:techarrow_2026_app/services/auth.dart';
 import 'package:techarrow_2026_app/services/team.dart';
-import 'package:board_datetime_picker/board_datetime_picker.dart';
 
 enum _ScreenStates { regFirst, regLast, login }
 
@@ -20,10 +21,19 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
   bool _hidePassword = true;
   _ScreenStates _state = _ScreenStates.login;
 
+  bool get _canProceedRegistrationFirst =>
+      _nicknameController.text.trim().isNotEmpty && birthdate != null;
+
+  bool get _canSubmitRegistration =>
+      _canProceedRegistrationFirst &&
+      _emailController.text.trim().isNotEmpty &&
+      _passwordController.text.isNotEmpty;
+
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _nicknameController.dispose();
     super.dispose();
   }
 
@@ -44,6 +54,8 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
   }
 
   Future<void> _signOn() async {
+    if (!_canSubmitRegistration) return;
+
     setState(() {});
 
     final success = await StreamAuthScope.of(context).signOn(
@@ -62,15 +74,49 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
     setState(() {});
   }
 
-  setScreenState(_ScreenStates newState) {
+  void setScreenState(_ScreenStates newState) {
     setState(() {
+      final switchesBetweenLoginAndRegistration =
+          (_state == _ScreenStates.login) != (newState == _ScreenStates.login);
+      if (switchesBetweenLoginAndRegistration) {
+        _resetFields();
+      }
       _state = newState;
     });
+  }
+
+  void _resetFields() {
+    _emailController.clear();
+    _passwordController.clear();
+    _nicknameController.clear();
+    birthdate = null;
+    _hidePassword = true;
   }
 
   @override
   void initState() {
     super.initState();
+  }
+
+  ButtonStyle _primaryButtonStyle(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return ButtonStyle(
+      backgroundColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return colorScheme.surfaceContainerHighest;
+        }
+        return theme.primaryColorLight;
+      }),
+      foregroundColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return colorScheme.onSurfaceVariant;
+        }
+        return colorScheme.onPrimary;
+      }),
+      shadowColor: WidgetStateProperty.all(Colors.transparent),
+    );
   }
 
   @override
@@ -123,13 +169,13 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
         context,
         label: "Никнейм",
         controller: _nicknameController,
-        hint: "Алексей Базин",
+        hint: "Введите никнейм",
       ),
       const SizedBox(height: 24),
       _buildDateField(
         context,
         label: "Дата рождения",
-        hint: "ДД/ММ/ГГГГ",
+        hint: "ДД.ММ.ГГГГ",
         selectedDate: birthdate,
         onDateSelected: (date) {
           setState(() {
@@ -143,13 +189,10 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
         children: [
           Expanded(
             child: ElevatedButton(
-              style: ButtonStyle(
-                backgroundColor: WidgetStatePropertyAll(
-                  Theme.of(context).primaryColorLight,
-                ),
-                shadowColor: WidgetStateProperty.all(Colors.transparent),
-              ),
-              onPressed: () => setScreenState(_ScreenStates.regLast),
+              style: _primaryButtonStyle(context),
+              onPressed: _canProceedRegistrationFirst
+                  ? () => setScreenState(_ScreenStates.regLast)
+                  : null,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Text("Далее"),
@@ -177,6 +220,7 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
           ),
         ],
       ),
+      SizedBox(height: 20),
     ],
   );
 
@@ -215,9 +259,9 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
       const SizedBox(height: 24),
       _buildField(
         context,
-        label: "Логин",
+        label: "Почта",
         controller: _emailController,
-        hint: "krutoychel2004",
+        hint: "Введите почту",
       ),
       const SizedBox(height: 24),
       _buildField(
@@ -230,7 +274,7 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
             _hidePassword = value;
           });
         },
-        hint: "********",
+        hint: "Введите пароль",
       ),
 
       const SizedBox(height: 48),
@@ -238,13 +282,8 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
         children: [
           Expanded(
             child: ElevatedButton(
-              style: ButtonStyle(
-                backgroundColor: WidgetStatePropertyAll(
-                  Theme.of(context).primaryColorLight,
-                ),
-                shadowColor: WidgetStateProperty.all(Colors.transparent),
-              ),
-              onPressed: _signOn,
+              style: _primaryButtonStyle(context),
+              onPressed: _canSubmitRegistration ? _signOn : null,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Text("Зарегистрироваться"),
@@ -260,7 +299,7 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
   Widget _buildLogin(BuildContext context) => Column(
     mainAxisAlignment: MainAxisAlignment.center,
     children: [
-      const SizedBox(height: 70),
+      const Spacer(),
       Text(
         'Привет!',
         style: Theme.of(context).textTheme.headlineMedium?.copyWith(
@@ -284,7 +323,7 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
         context,
         label: "Логин",
         controller: _emailController,
-        hint: "krutoychel2004",
+        hint: "Введите логин",
       ),
       const SizedBox(height: 24),
       _buildField(
@@ -297,7 +336,7 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
             _hidePassword = value;
           });
         },
-        hint: "********",
+        hint: "Введите пароль",
       ),
 
       const SizedBox(height: 48),
@@ -305,12 +344,7 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
         children: [
           Expanded(
             child: ElevatedButton(
-              style: ButtonStyle(
-                backgroundColor: WidgetStatePropertyAll(
-                  Theme.of(context).primaryColorLight,
-                ),
-                shadowColor: WidgetStateProperty.all(Colors.transparent),
-              ),
+              style: _primaryButtonStyle(context),
               onPressed: _signIn,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -339,6 +373,7 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
           ),
         ],
       ),
+      SizedBox(height: 20),
     ],
   );
 
@@ -362,6 +397,8 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
             controller: controller,
             focusNode: focusNode,
             obscureText: hidden ?? false,
+            textAlignVertical: TextAlignVertical.center,
+            onChanged: (_) => setState(() {}),
 
             decoration: InputDecoration(
               hint: Text(hint),
@@ -372,7 +409,7 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
                   ? GestureDetector(
                       behavior: HitTestBehavior.opaque,
                       child: Icon(
-                        hidden ? Icons.visibility : Icons.visibility_off,
+                        !hidden ? Icons.visibility : Icons.visibility_off,
                       ),
                       onTap: () => onHide(!hidden),
                     )
@@ -397,18 +434,11 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
         Text(label, style: Theme.of(context).textTheme.labelLarge),
         const SizedBox(height: 12),
         GestureDetector(
-          onTap: () async {
-            final result = await showBoardDateTimeMultiPicker(
-              context: context,
-              pickerType: DateTimePickerType.date,
-              startDate: selectedDate,
-              minimumDate: DateTime(1900),
-              maximumDate: DateTime.now(),
-            );
-            if (result != null) {
-              onDateSelected(result.start);
-            }
-          },
+          onTap: () => _showBirthdatePicker(
+            context,
+            selectedDate: selectedDate,
+            onDateSelected: onDateSelected,
+          ),
           child: Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -417,11 +447,12 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
               borderRadius: BorderRadius.circular(14),
             ),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
                   child: Text(
                     selectedDate != null
-                        ? "${selectedDate.day.toString().padLeft(2, '0')}/${selectedDate.month.toString().padLeft(2, '0')}/${selectedDate.year}"
+                        ? "${selectedDate.day.toString().padLeft(2, '0')}.${selectedDate.month.toString().padLeft(2, '0')}.${selectedDate.year}"
                         : hint,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: selectedDate != null
@@ -440,5 +471,73 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
         ),
       ],
     );
+  }
+
+  void _showBirthdatePicker(
+    BuildContext context, {
+    required DateTime? selectedDate,
+    required void Function(DateTime) onDateSelected,
+  }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final buttonColor = colorScheme.primary;
+    final now = DateTime.now();
+    final initialDate =
+        selectedDate ?? DateTime(now.year - 16, now.month, now.day);
+
+    BottomPicker.date(
+      dismissable: true,
+      initialDateTime: initialDate,
+      minDateTime: DateTime(1900),
+      maxDateTime: now,
+      dateOrder: DatePickerDateOrder.dmy,
+      backgroundColor: colorScheme.surface,
+      buttonWidth: MediaQuery.of(context).size.width - 40,
+      buttonPadding: 14,
+      buttonSingleColor: buttonColor,
+      pickerThemeData: CupertinoTextThemeData(
+        dateTimePickerTextStyle: theme.textTheme.titleMedium?.copyWith(
+          color: colorScheme.onSurface,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      headerBuilder: (pickerContext) => Padding(
+        padding: const EdgeInsets.only(top: 8, bottom: 4),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Выберите дату рождения',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+            ),
+            IconButton(
+              onPressed: () => Navigator.of(pickerContext).pop(),
+              icon: Icon(Icons.close, color: colorScheme.onSurfaceVariant),
+            ),
+          ],
+        ),
+      ),
+      buttonContent: Text(
+        'Готово',
+        textAlign: TextAlign.center,
+        style: theme.textTheme.labelLarge?.copyWith(
+          color: colorScheme.onPrimary,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      buttonStyle: BoxDecoration(
+        color: buttonColor,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      onSubmit: (date) {
+        if (date is DateTime) {
+          onDateSelected(date);
+        }
+      },
+    ).show(context);
   }
 }

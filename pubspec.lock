@@ -57,6 +57,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.2"
+  bottom_picker:
+    dependency: "direct main"
+    description:
+      name: bottom_picker
+      sha256: "721b95e389b1c91e387832833fdcd0fa8658a1e3f9b9d75a966af9354bb24ada"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.1.1"
   build:
     dependency: transitive
     description:
@@ -294,6 +302,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  flutter_dotenv:
+    dependency: "direct main"
+    description:
+      name: flutter_dotenv
+      sha256: d41da11fb497314fbf89811ec30af02d1d898b47980a129f0a8c0a1720460ba2
+      url: "https://pub.dev"
+    source: hosted
+    version: "6.0.1"
   flutter_lints:
     dependency: "direct dev"
     description:
@@ -302,6 +318,11 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.0.0"
+  flutter_localizations:
+    dependency: "direct main"
+    description: flutter
+    source: sdk
+    version: "0.0.0"
   flutter_map:
     dependency: "direct main"
     description:

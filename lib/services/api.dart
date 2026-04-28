@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:chopper/chopper.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:techarrow_2026_app/gen/swagger.swagger.dart';
 import 'package:techarrow_2026_app/services/auth.dart';
@@ -15,7 +16,13 @@ class ApiService {
   late final StreamAuth _auth;
   Future<bool>? _refreshInFlight;
   Swagger get client => _client;
-  static final baseUrl = Uri.http("localhost:8000");
+  static const _defaultBaseUrl = 'http://localhost:8000';
+  static Uri get baseUrl {
+    final value = dotenv.isInitialized
+        ? dotenv.maybeGet('API_BASE_URL', fallback: _defaultBaseUrl)
+        : _defaultBaseUrl;
+    return Uri.parse(value ?? _defaultBaseUrl);
+  }
 
   void init(StreamAuth auth) {
     _auth = auth;
@@ -44,7 +51,7 @@ class ApiService {
     final token = await _getToken();
     final request = http.MultipartRequest(
       'POST',
-      Uri.http('localhost:8000', '/api/quests'),
+      baseUrl.replace(path: '/api/quests'),
     );
 
     if (token != null && token.isNotEmpty) {
