@@ -42,6 +42,8 @@ class _PersonalLeaderboardPageState extends State<PersonalLeaderboardPage> {
             changePage: widget.changePage,
             withAvatar: true,
             currentUserPlace: -1,
+            currentUserPoints: 0,
+            currentPlaceLabel: 'Ваше место',
             entries: const [],
             body: const Center(child: CircularProgressIndicator()),
           );
@@ -53,6 +55,8 @@ class _PersonalLeaderboardPageState extends State<PersonalLeaderboardPage> {
             changePage: widget.changePage,
             withAvatar: true,
             currentUserPlace: -1,
+            currentUserPoints: 0,
+            currentPlaceLabel: 'Ваше место',
             entries: const [],
             body: Center(
               child: Column(
@@ -76,7 +80,13 @@ class _PersonalLeaderboardPageState extends State<PersonalLeaderboardPage> {
 
         final data = snapshot.data!;
         final entries = data.items
-            .map((e) => LeaderboardEntry(place: e.place, title: e.name))
+            .map(
+              (e) => LeaderboardEntry(
+                place: e.place,
+                title: e.name,
+                points: e.points,
+              ),
+            )
             .toList();
 
         return LeaderboardView(
@@ -84,6 +94,8 @@ class _PersonalLeaderboardPageState extends State<PersonalLeaderboardPage> {
           changePage: widget.changePage,
           withAvatar: true,
           currentUserPlace: data.currentUser.place,
+          currentUserPoints: data.currentUser.points,
+          currentPlaceLabel: 'Ваше место',
           entries: entries,
         );
       },

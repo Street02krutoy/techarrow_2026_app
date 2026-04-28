@@ -95,8 +95,11 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
     try {
       await ApiService.instance.client.apiQuestRunsActiveAbandonPost();
       if (!mounted) return;
-      StreamQuestScope.of(context).stopSession();
-      Navigator.of(context).maybePop();
+      final questState = StreamQuestScope.of(context);
+      final questId = questState.activeSession?.questId;
+      questState.stopSession();
+      await questState.fetchLatestRunResult(questId: questId, maxAttempts: 5);
+      if (!mounted) return;
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -132,11 +135,21 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
       final body = res.body;
       if (res.isSuccessful && body != null) {
         if (body.correct) {
-          StreamQuestScope.of(context).setActiveRunProgress(body.progress);
+          final questState = StreamQuestScope.of(context);
+          questState.setActiveRunProgress(body.progress);
           _codeController.clear();
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(const SnackBar(content: Text('Ответ принят')));
+          final statusValue = body.progress.status.value;
+          if (statusValue == 'completed' || statusValue == 'abandoned') {
+            questState.stopSession();
+            await questState.fetchLatestRunResult(
+              questId: body.progress.questId,
+              maxAttempts: 5,
+            );
+            if (!mounted) return;
+          }
         } else {
           ScaffoldMessenger.of(
             context,
@@ -201,7 +214,7 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
           FlutterMap(
             options: const MapOptions(
               initialCenter: _fallbackCenter,
-              initialZoom: 12.5,
+              initialZoom: 6,
             ),
             children: [
               TileLayer(
@@ -209,13 +222,44 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
                 userAgentPackageName: 'com.example.techarrow_2026_app',
               ),
               MarkerLayer(
-                markers: const [
-                  Marker(
-                    point: _fallbackCenter,
-                    width: 44,
-                    height: 44,
-                    child: Icon(Icons.location_on, size: 40, color: Colors.red),
+                markers: [
+                  ...?point?.previousCheckpoints.map(
+                    (checkpoint) => Marker(
+                      point: LatLng(checkpoint.latitude, checkpoint.longitude),
+                      width: 44,
+                      height: 44,
+                      child: const Icon(
+                        Icons.location_on,
+                        size: 40,
+                        color: Colors.green,
+                      ),
+                    ),
                   ),
+                  if (point?.currentCheckpoint != null)
+                    Marker(
+                      point: LatLng(
+                        point!.currentCheckpoint!.latitude,
+                        point.currentCheckpoint!.longitude,
+                      ),
+                      width: 46,
+                      height: 46,
+                      child: const Icon(
+                        Icons.location_on,
+                        size: 42,
+                        color: Colors.red,
+                      ),
+                    )
+                  else
+                    const Marker(
+                      point: _fallbackCenter,
+                      width: 44,
+                      height: 44,
+                      child: Icon(
+                        Icons.location_on,
+                        size: 40,
+                        color: Colors.red,
+                      ),
+                    ),
                 ],
               ),
             ],

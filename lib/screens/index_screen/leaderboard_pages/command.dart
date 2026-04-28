@@ -42,6 +42,8 @@ class _CommandLeaderboardPageState extends State<CommandLeaderboardPage> {
             changePage: widget.changePage,
             withAvatar: false,
             currentUserPlace: -1,
+            currentUserPoints: 0,
+            currentPlaceLabel: 'Место вашей команды',
             entries: const [],
             body: const Center(child: CircularProgressIndicator()),
           );
@@ -53,6 +55,8 @@ class _CommandLeaderboardPageState extends State<CommandLeaderboardPage> {
             changePage: widget.changePage,
             withAvatar: false,
             currentUserPlace: -1,
+            currentUserPoints: 0,
+            currentPlaceLabel: 'Место вашей команды',
             entries: const [],
             body: Center(
               child: Column(
@@ -76,7 +80,13 @@ class _CommandLeaderboardPageState extends State<CommandLeaderboardPage> {
 
         final data = snapshot.data!;
         final entries = data.items
-            .map((e) => LeaderboardEntry(place: e.place, title: e.name))
+            .map(
+              (e) => LeaderboardEntry(
+                place: e.place,
+                title: e.name,
+                points: e.points,
+              ),
+            )
             .toList();
 
         return LeaderboardView(
@@ -84,6 +94,8 @@ class _CommandLeaderboardPageState extends State<CommandLeaderboardPage> {
           changePage: widget.changePage,
           withAvatar: false,
           currentUserPlace: data.currentUserTeam?.place ?? -1,
+          currentUserPoints: data.currentUserTeam?.points ?? 0,
+          currentPlaceLabel: 'Место вашей команды',
           entries: entries,
         );
       },

@@ -2,10 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:techarrow_2026_app/screens/index_screen/pages/leaderboard.dart';
 
 class LeaderboardEntry {
-  const LeaderboardEntry({required this.place, required this.title});
+  const LeaderboardEntry({
+    required this.place,
+    required this.title,
+    required this.points,
+  });
 
   final int place;
   final String title;
+  final int points;
 }
 
 class LeaderboardView extends StatelessWidget {
@@ -16,6 +21,8 @@ class LeaderboardView extends StatelessWidget {
     required this.changePage,
     required this.withAvatar,
     required this.currentUserPlace,
+    required this.currentUserPoints,
+    required this.currentPlaceLabel,
     this.body,
   });
 
@@ -24,23 +31,37 @@ class LeaderboardView extends StatelessWidget {
   final void Function(LeaderboardPageStatus status) changePage;
   final bool withAvatar;
   final int currentUserPlace;
+  final int currentUserPoints;
+  final String currentPlaceLabel;
   final Widget? body;
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return Scaffold(
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
           child: Column(
             children: [
-              const Text(
+              Text(
                 'Рейтинг',
-                style: TextStyle(fontWeight: FontWeight.w600),
+                style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 18),
               _LeaderboardTabs(activeTab: activeTab, changePage: changePage),
               const SizedBox(height: 26),
+              if (currentUserPlace > 0)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '$currentPlaceLabel: $currentUserPlace ($currentUserPoints очков)',
+                    style: textTheme.titleMedium?.copyWith(
+                      color: const Color(0xFF2F5C73),
+                    ),
+                  ),
+                ),
+              if (currentUserPlace > 0) const SizedBox(height: 22),
               Expanded(
                 child: body ??
                     ListView.separated(
@@ -52,8 +73,9 @@ class LeaderboardView extends StatelessWidget {
                         return _LeaderboardRow(
                           place: entry.place,
                           title: entry.title,
+                          points: entry.points,
                           withAvatar: withAvatar,
-                          isCurrentUser: entry.place == currentUserPlace,
+                          isCurrentUser: false,
                         );
                       },
                     ),
@@ -74,59 +96,54 @@ class _LeaderboardTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final borderColor = cs.outlineVariant;
+    final activeColor = const Color(0xFFD6E4F2);
+
+    Widget tabButton({
+      required String title,
+      required bool isActive,
+      required VoidCallback onTap,
+    }) {
+      return Expanded(
+        child: Material(
+          color: isActive ? activeColor : Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            child: Center(
+              child: Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return Container(
-      height: 36,
+      height: 48,
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Colors.black26),
-        borderRadius: BorderRadius.circular(20),
+        color: cs.surface,
+        border: Border.all(color: borderColor),
+        borderRadius: BorderRadius.circular(28),
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _TabButton(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: Row(
+          children: [
+            tabButton(
               title: 'Личный',
               isActive: activeTab == LeaderboardPageStatus.personal,
               onTap: () => changePage(LeaderboardPageStatus.personal),
             ),
-          ),
-          Expanded(
-            child: _TabButton(
+            Container(width: 1, color: borderColor),
+            tabButton(
               title: 'Командный',
               isActive: activeTab == LeaderboardPageStatus.command,
               onTap: () => changePage(LeaderboardPageStatus.command),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TabButton extends StatelessWidget {
-  const _TabButton({
-    required this.title,
-    required this.isActive,
-    required this.onTap,
-  });
-
-  final String title;
-  final bool isActive;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: isActive ? const Color(0xFFD6E4F2) : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          title,
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          ],
         ),
       ),
     );
@@ -137,12 +154,14 @@ class _LeaderboardRow extends StatelessWidget {
   const _LeaderboardRow({
     required this.place,
     required this.title,
+    required this.points,
     required this.withAvatar,
     required this.isCurrentUser,
   });
 
   final int place;
   final String title;
+  final int points;
   final bool withAvatar;
   final bool isCurrentUser;
 
@@ -195,8 +214,13 @@ class _LeaderboardRow extends StatelessWidget {
           ),
         ),
         const Spacer(),
-        if (isCurrentUser)
-          const CircleAvatar(radius: 6, backgroundColor: Color(0xFFD0E1F6)),
+        Text(
+          '$points',
+          style: const TextStyle(
+            color: Color(0xFF2F5C73),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
       ],
     );
   }

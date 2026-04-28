@@ -20,6 +20,9 @@ class QuestResultScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final tt = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
+    final progress = StreamQuestScope.of(context).lastRunResult;
+
+    print(progress);
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -60,16 +63,26 @@ class QuestResultScreen extends StatelessWidget {
                       style: tt.bodyLarge,
                     ),
                     const SizedBox(height: 6),
-                    Text('Статус: ${result.status.name}', style: tt.bodyLarge),
                   ],
                 ),
               ),
               const Spacer(),
-              FilledButton(
+              ElevatedButton(
                 onPressed: () {
                   StreamQuestScope.of(context).clearLastRunResult();
                   Navigator.of(context).maybePop();
                 },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(
+                    context,
+                  ).colorScheme.primaryContainer,
+                  foregroundColor: Colors.black87,
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  elevation: 0,
+                ),
                 child: const Text('Закрыть'),
               ),
             ],

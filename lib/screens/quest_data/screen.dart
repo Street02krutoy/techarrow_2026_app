@@ -18,11 +18,46 @@ class QuestDataScreen extends StatefulWidget {
 class _QuestDataScreenState extends State<QuestDataScreen> {
   late Quest _quest;
   bool _isTogglingFavorite = false;
+  String? _description;
+  String? _rulesAndWarnings;
+  bool _isLoadingDetail = false;
 
   @override
   void initState() {
     super.initState();
     _quest = widget.quest;
+    _loadQuestDetail();
+  }
+
+  Future<void> _loadQuestDetail() async {
+    setState(() {
+      _isLoadingDetail = true;
+    });
+    try {
+      final res = await ApiService.instance.client.apiQuestsQuestIdGet(
+        questId: _quest.id,
+      );
+      final detail = res.body;
+      if (!mounted || detail == null) return;
+      setState(() {
+        _description = detail.description;
+        _rulesAndWarnings = detail.rulesAndWarnings;
+        _quest = _quest.copyWith(
+          checkpointsCount: detail.points.length,
+          imageSrc: detail.imageFileId != null
+              ? "${ApiService.baseUrl.toString()}/api/file/${detail.imageFileId}"
+              : _quest.imageSrc,
+        );
+      });
+    } catch (_) {
+      // keep fallback placeholders when detail loading fails
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingDetail = false;
+        });
+      }
+    }
   }
 
   Future<void> _toggleFavorite() async {
@@ -326,12 +361,16 @@ class _QuestDataScreenState extends State<QuestDataScreen> {
                       color: cs.surfaceContainerHigh,
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    child: Text(
-                      'Добавьте описание квеста',
-                      style: tt.bodyMedium?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
-                    ),
+                    child: _isLoadingDetail
+                        ? const Center(child: CircularProgressIndicator())
+                        : Text(
+                            (_description != null && _description!.isNotEmpty)
+                                ? _description!
+                                : 'Описание отсутствует',
+                            style: tt.bodyMedium?.copyWith(
+                              color: cs.onSurfaceVariant,
+                            ),
+                          ),
                   ),
                   const SizedBox(height: 20),
                   Text(
@@ -348,12 +387,17 @@ class _QuestDataScreenState extends State<QuestDataScreen> {
                       color: cs.surfaceContainerHigh,
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    child: Text(
-                      'Дополнительные правила и предупреждения квеста',
-                      style: tt.bodyMedium?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
-                    ),
+                    child: _isLoadingDetail
+                        ? const Center(child: CircularProgressIndicator())
+                        : Text(
+                            (_rulesAndWarnings != null &&
+                                    _rulesAndWarnings!.isNotEmpty)
+                                ? _rulesAndWarnings!
+                                : 'Правила и предупреждения отсутствуют',
+                            style: tt.bodyMedium?.copyWith(
+                              color: cs.onSurfaceVariant,
+                            ),
+                          ),
                   ),
                   const SizedBox(height: 24),
                 ],

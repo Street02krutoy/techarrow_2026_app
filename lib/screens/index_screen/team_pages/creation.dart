@@ -82,9 +82,22 @@ class _TeamCreationPageState extends State<TeamCreationPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              "Создание команды",
-              style: Theme.of(context).textTheme.titleMedium,
+            SizedBox(height: 20),
+
+            Row(
+              children: [
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  onPressed: () {
+                    widget.changePage(TeamPageStatus.join);
+                  },
+                  icon: Icon(Icons.arrow_back),
+                ),
+                Text(
+                  "Создание команды",
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ],
             ),
             SizedBox(height: 20),
 

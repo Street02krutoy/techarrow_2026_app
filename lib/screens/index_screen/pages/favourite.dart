@@ -3,8 +3,16 @@ import 'package:techarrow_2026_app/gen/swagger.swagger.dart';
 import 'package:techarrow_2026_app/models/quest.dart';
 import 'package:techarrow_2026_app/services/api.dart';
 import 'package:techarrow_2026_app/widgets/event_card.dart';
+import 'package:techarrow_2026_app/gen/swagger.enums.swagger.dart' as enums;
 
 enum _MyQuestsTab { favourites, created }
+
+class _CreatedQuestItem {
+  const _CreatedQuestItem({required this.quest, required this.status});
+
+  final Quest quest;
+  final enums.QuestStatusSchema status;
+}
 
 class FavouritePage extends StatefulWidget {
   const FavouritePage({super.key});
@@ -18,8 +26,9 @@ class _FavouritePageState extends State<FavouritePage> {
       'https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcQRZRfRJNfPiR_PG_fa6JHQw3AEYUt0c-oCRwt07bUQRZfdGHhK';
 
   late Future<List<Quest>> _favoritesFuture;
-  late Future<List<Quest>> _createdFuture;
+  late Future<List<_CreatedQuestItem>> _createdFuture;
   _MyQuestsTab _tab = _MyQuestsTab.favourites;
+  int? _updatingStatusQuestId;
 
   @override
   void initState() {
@@ -49,22 +58,25 @@ class _FavouritePageState extends State<FavouritePage> {
         .toList();
   }
 
-  Future<List<Quest>> _loadCreated() async {
+  Future<List<_CreatedQuestItem>> _loadCreated() async {
     final res = await ApiService.instance.client.apiQuestsMyGet();
     final items = res.body?.items ?? <QuestResponse>[];
 
     return items
         .map(
-          (item) => Quest(
-            id: item.id,
-            isFavorite: item.isFavourite ?? false,
-            name: item.title,
-            duration: '${item.durationMinutes} мин',
-            area: item.location,
-            difficulty: item.difficulty.toString(),
-            imageSrc: item.imageFileId != null
-                ? "${ApiService.baseUrl.toString()}/api/file/${item.imageFileId}"
-                : _sampleQuestImage,
+          (item) => _CreatedQuestItem(
+            quest: Quest(
+              id: item.id,
+              isFavorite: item.isFavourite ?? false,
+              name: item.title,
+              duration: '${item.durationMinutes} мин',
+              area: item.location,
+              difficulty: item.difficulty.toString(),
+              imageSrc: item.imageFileId != null
+                  ? "${ApiService.baseUrl.toString()}/api/file/${item.imageFileId}"
+                  : _sampleQuestImage,
+            ),
+            status: item.status,
           ),
         )
         .toList();
@@ -94,6 +106,30 @@ class _FavouritePageState extends State<FavouritePage> {
     });
   }
 
+  String _statusLabel(enums.QuestStatusSchema status) {
+    switch (status) {
+      case enums.QuestStatusSchema.onModeration:
+        return 'На модерации';
+      case enums.QuestStatusSchema.published:
+        return 'Опубликован';
+      case enums.QuestStatusSchema.archived:
+        return 'Архив';
+      default:
+        return 'Неизвестно';
+    }
+  }
+
+  enums.QuestArchiveStatusSchema? _nextStatus(enums.QuestStatusSchema status) {
+    switch (status) {
+      case enums.QuestStatusSchema.onModeration:
+        return enums.QuestArchiveStatusSchema.published;
+      case enums.QuestStatusSchema.published:
+        return enums.QuestArchiveStatusSchema.archived;
+      default:
+        return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -112,54 +148,136 @@ class _FavouritePageState extends State<FavouritePage> {
               child: _TabSlider(active: _tab, onChanged: _setTab),
             ),
             Expanded(
-              child: FutureBuilder<List<Quest>>(
-                future: _tab == _MyQuestsTab.favourites
-                    ? _favoritesFuture
-                    : _createdFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState != ConnectionState.done) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
+              child: _tab == _MyQuestsTab.favourites
+                  ? FutureBuilder<List<Quest>>(
+                      future: _favoritesFuture,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState != ConnectionState.done) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
 
-                  final quests = snapshot.data ?? <Quest>[];
-                  if (quests.isEmpty) {
-                    return Center(
-                      child: Text(
-                        _tab == _MyQuestsTab.favourites
-                            ? 'Нет избранных квестов'
-                            : 'Нет созданных квестов',
-                      ),
-                    );
-                  }
+                        final quests = snapshot.data ?? <Quest>[];
+                        if (quests.isEmpty) {
+                          return const Center(
+                            child: Text('Нет избранных квестов'),
+                          );
+                        }
 
-                  return GridView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: 0.7,
-                        ),
-                    itemCount: quests.length,
-                    itemBuilder: (context, index) {
-                      final quest = quests[index];
-                      return QuestCard(
-                        quest: quest,
-                        onFavorite: (value) async {
-                          await _toggleFavorite(quest, value);
-                        },
-                        onReturn: () async {
-                          setState(() {
-                            _favoritesFuture = _loadFavorites();
-                            _createdFuture = _loadCreated();
-                          });
-                        },
-                      );
-                    },
-                  );
-                },
-              ),
+                        return GridView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                crossAxisSpacing: 12,
+                                mainAxisSpacing: 12,
+                                childAspectRatio: 0.7,
+                              ),
+                          itemCount: quests.length,
+                          itemBuilder: (context, index) {
+                            final quest = quests[index];
+                            return QuestCard(
+                              quest: quest,
+                              onFavorite: (value) async {
+                                await _toggleFavorite(quest, value);
+                              },
+                              onReturn: () async {
+                                setState(() {
+                                  _favoritesFuture = _loadFavorites();
+                                  _createdFuture = _loadCreated();
+                                });
+                              },
+                            );
+                          },
+                        );
+                      },
+                    )
+                  : FutureBuilder<List<_CreatedQuestItem>>(
+                      future: _createdFuture,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState != ConnectionState.done) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
+
+                        final items = snapshot.data ?? <_CreatedQuestItem>[];
+                        if (items.isEmpty) {
+                          return const Center(
+                            child: Text('Нет созданных квестов'),
+                          );
+                        }
+
+                        return GridView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                crossAxisSpacing: 12,
+                                mainAxisSpacing: 12,
+                                childAspectRatio: 0.7,
+                              ),
+                          itemCount: items.length,
+                          itemBuilder: (context, index) {
+                            final item = items[index];
+                            final next = _nextStatus(item.status);
+                            final isUpdating =
+                                _updatingStatusQuestId == item.quest.id;
+                            return Stack(
+                              children: [
+                                Positioned.fill(
+                                  child: QuestCard(
+                                    quest: item.quest,
+                                    onFavorite: (value) async {
+                                      await _toggleFavorite(item.quest, value);
+                                    },
+                                    onReturn: () async {
+                                      setState(() {
+                                        _favoritesFuture = _loadFavorites();
+                                        _createdFuture = _loadCreated();
+                                      });
+                                    },
+                                  ),
+                                ),
+                                Positioned(
+                                  left: 8,
+                                  right: 8,
+                                  bottom: 8,
+                                  child: SizedBox(
+                                    height: 30,
+                                    child: OutlinedButton(
+                                      onPressed: null,
+                                      style: OutlinedButton.styleFrom(
+                                        backgroundColor: Colors.white
+                                            .withValues(alpha: 0.92),
+                                        side: BorderSide(
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.outlineVariant,
+                                        ),
+                                        padding: EdgeInsets.zero,
+                                        textStyle: const TextStyle(
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        isUpdating
+                                            ? 'Сохранение...'
+                                            : _statusLabel(item.status),
+                                        textAlign: TextAlign.center,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                    ),
             ),
           ],
         ),

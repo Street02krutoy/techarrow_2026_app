@@ -73,6 +73,9 @@ class StreamQuest with WidgetsBindingObserver {
 
   QuestRunProgressResponse? _activeRunProgress;
   QuestRunProgressResponse? get activeRunProgress => _activeRunProgress;
+  QuestRunProgressResponse? _lastFinishedRunProgress;
+  QuestRunProgressResponse? get lastFinishedRunProgress =>
+      _lastFinishedRunProgress;
 
   Stream<QuestRunProgressResponse?> get onActiveRunProgressChanged =>
       _progressController?.stream ?? const Stream.empty();
@@ -100,6 +103,7 @@ class StreamQuest with WidgetsBindingObserver {
   Future<bool> startSession(Quest catalogQuest) async {
     stopSession();
     clearLastRunResult();
+    _lastFinishedRunProgress = null;
 
     if (kIsWeb) {
       return false;
@@ -262,6 +266,39 @@ class StreamQuest with WidgetsBindingObserver {
     _controller.add(next);
   }
 
+  Future<void> fetchLatestRunResult({
+    int? questId,
+    int maxAttempts = 1,
+    Duration retryDelay = const Duration(milliseconds: 300),
+  }) async {
+    for (var attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        final res = await ApiService.instance.client.apiQuestRunsHistoryGet();
+        final history = res.body ?? const <QuestRunHistoryItem>[];
+        if (history.isNotEmpty) {
+          QuestRunHistoryItem? latest;
+          for (final item in history) {
+            if (questId != null && item.questId != questId) {
+              continue;
+            }
+            if (latest == null || item.startedAt.isAfter(latest.startedAt)) {
+              latest = item;
+            }
+          }
+          if (latest != null) {
+            _lastRunResultController?.add(latest);
+            return;
+          }
+        }
+      } catch (_) {
+        // ignore and retry if requested
+      }
+      if (attempt < maxAttempts - 1) {
+        await Future.delayed(retryDelay);
+      }
+    }
+  }
+
   Future<void> _restoreActiveRunOnInit() async {
     try {
       final res = await ApiService.instance.client.apiQuestRunsActiveGet();
@@ -303,6 +340,7 @@ class StreamQuest with WidgetsBindingObserver {
 
   /// Stops step tracking and clears the active session.
   void stopSession() {
+    _lastFinishedRunProgress = _activeRunProgress;
     _cancelStepSubscriptionSilently();
     _elapsedTicker?.cancel();
     _elapsedTicker = null;
@@ -318,6 +356,7 @@ class StreamQuest with WidgetsBindingObserver {
   void clearLastRunResult() {
     _lastRunResult = null;
     _lastRunResultController?.add(null);
+    _lastFinishedRunProgress = null;
   }
 
   void dispose() {
