@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:techarrow_2026_app/screens/achievements_screen/screen.dart';
 import 'package:techarrow_2026_app/screens/edit_user_screen/screen.dart';
 import 'package:techarrow_2026_app/screens/quest_history_screen/screen.dart';
 import 'package:techarrow_2026_app/services/auth.dart';
@@ -54,7 +55,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       onTap: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (_) => const _AchievementsScreen(),
+                            builder: (_) => const AchievementsScreen(),
                           ),
                         );
                       },
@@ -172,23 +173,6 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _AchievementsScreen extends StatelessWidget {
-  const _AchievementsScreen();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Достижения',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-      ),
-      body: const Center(child: Text('Скоро')),
     );
   }
 }
