@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:techarrow_2026_app/gen/swagger.swagger.dart';
+import 'package:techarrow_2026_app/screens/quest_result_screen/screen.dart';
+import 'package:techarrow_2026_app/services/api.dart';
 import 'package:techarrow_2026_app/services/quest.dart';
 
 class CurrentQuestScreen extends StatefulWidget {
@@ -15,6 +18,9 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
   static const LatLng _fallbackCenter = LatLng(56.3269, 44.0065);
 
   late final TextEditingController _codeController;
+  bool _isSubmittingCode = false;
+  bool _isAbandoning = false;
+  int? _lastShownRunResultId;
 
   @override
   void initState() {
@@ -78,16 +84,99 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
   }
 
   Future<void> _endQuestEarly() async {
-    StreamQuestScope.of(context).stopSession();
-    if (!mounted) return;
-    Navigator.of(context).maybePop();
+    if (_isAbandoning) return;
+    setState(() {
+      _isAbandoning = true;
+    });
+    try {
+      await ApiService.instance.client.apiQuestRunsActiveAbandonPost();
+      if (!mounted) return;
+      StreamQuestScope.of(context).stopSession();
+      Navigator.of(context).maybePop();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Не удалось завершить квест')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isAbandoning = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _submitCode() async {
+    if (_isSubmittingCode) return;
+    final answer = _codeController.text.trim();
+    if (answer.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Введите код')));
+      return;
+    }
+
+    setState(() {
+      _isSubmittingCode = true;
+    });
+    try {
+      final res = await ApiService.instance.client.apiQuestRunsActiveAnswerPost(
+        body: QuestRunAnswerRequest(answer: answer),
+      );
+      if (!mounted) return;
+      final body = res.body;
+      if (res.isSuccessful && body != null) {
+        if (body.correct) {
+          StreamQuestScope.of(context).setActiveRunProgress(body.progress);
+          _codeController.clear();
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Ответ принят')));
+        } else {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Неверный код')));
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Не удалось отправить код')),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Не удалось отправить код')));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmittingCode = false;
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final session = StreamQuestScope.of(context).activeSession;
+    final questStream = StreamQuestScope.of(context);
+    final session = questStream.activeSession;
+    final point = questStream.activeRunProgress;
+    final runResult = questStream.lastRunResult;
+
+    if (runResult != null && _lastShownRunResultId != runResult.runId) {
+      _lastShownRunResultId = runResult.runId;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => QuestResultScreen(result: runResult),
+          ),
+        );
+      });
+    }
 
     if (session == null) {
       return Scaffold(
@@ -218,7 +307,7 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
                         readOnly: true,
                         decoration: _fieldDecoration(
                           context,
-                          hint: session.name,
+                          hint: point?.currentCheckpoint?.title ?? "Н/Д",
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -229,7 +318,7 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
                         maxLines: 2,
                         decoration: _fieldDecoration(
                           context,
-                          hint: 'Добавьте задание (пока нет данных из сервиса)',
+                          hint: point?.currentCheckpoint?.task ?? "Н/Д",
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -257,9 +346,9 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
                                   borderRadius: BorderRadius.circular(26),
                                 ),
                               ),
-                              onPressed: () {},
+                              onPressed: _isSubmittingCode ? null : _submitCode,
                               child: Text(
-                                'Отправить',
+                                _isSubmittingCode ? 'Отправка...' : 'Отправить',
                                 style: textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -285,7 +374,7 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
 
                       const SizedBox(height: 16),
                       OutlinedButton(
-                        onPressed: _endQuestEarly,
+                        onPressed: _isAbandoning ? null : _endQuestEarly,
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 18),
                           side: BorderSide(color: colorScheme.outline),
@@ -294,7 +383,9 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
                           ),
                         ),
                         child: Text(
-                          'Досрочно завершить квест',
+                          _isAbandoning
+                              ? 'Завершение...'
+                              : 'Досрочно завершить квест',
                           style: textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                             color: colorScheme.onSurface,

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:pedometer/pedometer.dart';
+import 'package:techarrow_2026_app/gen/swagger.swagger.dart';
 import 'package:techarrow_2026_app/models/quest.dart';
 import 'package:techarrow_2026_app/models/streaming_quest_session.dart';
 import 'package:techarrow_2026_app/services/api.dart';
@@ -26,6 +27,8 @@ class StreamQuestScope extends InheritedNotifier<StreamQuestNotifier> {
 class StreamQuestNotifier extends ChangeNotifier {
   StreamQuestNotifier() : streamQuest = StreamQuest() {
     streamQuest.onActiveSessionChanged.listen((_) => notifyListeners());
+    streamQuest.onActiveRunProgressChanged.listen((_) => notifyListeners());
+    streamQuest.onLastRunResultChanged.listen((_) => notifyListeners());
   }
 
   final StreamQuest streamQuest;
@@ -44,6 +47,18 @@ class StreamQuest with WidgetsBindingObserver {
     _controller.stream.listen((StreamingQuestSession? next) {
       _session = next;
     });
+    // Note: this controller was added later; keep it nullable so hot-reload
+    // doesn't crash on older in-memory instances.
+    _progressController =
+        StreamController<QuestRunProgressResponse?>.broadcast();
+    _progressController?.stream.listen((QuestRunProgressResponse? next) {
+      _activeRunProgress = next;
+    });
+    _lastRunResultController =
+        StreamController<QuestRunHistoryItem?>.broadcast();
+    _lastRunResultController?.stream.listen((QuestRunHistoryItem? next) {
+      _lastRunResult = next;
+    });
     WidgetsBinding.instance.addObserver(this);
   }
 
@@ -55,10 +70,24 @@ class StreamQuest with WidgetsBindingObserver {
 
   final StreamController<StreamingQuestSession?> _controller;
 
+  QuestRunProgressResponse? _activeRunProgress;
+  QuestRunProgressResponse? get activeRunProgress => _activeRunProgress;
+
+  Stream<QuestRunProgressResponse?> get onActiveRunProgressChanged =>
+      _progressController?.stream ?? const Stream.empty();
+
+  StreamController<QuestRunProgressResponse?>? _progressController;
+
+  QuestRunHistoryItem? _lastRunResult;
+  QuestRunHistoryItem? get lastRunResult => _lastRunResult;
+
+  Stream<QuestRunHistoryItem?> get onLastRunResultChanged =>
+      _lastRunResultController?.stream ?? const Stream.empty();
+
+  StreamController<QuestRunHistoryItem?>? _lastRunResultController;
+
   StreamSubscription<StepCount>? _stepSubscription;
   Timer? _elapsedTicker;
-  Timer? _backendPoller;
-  bool _isBackendPollInFlight = false;
   int? _baselineTotalSteps;
   DateTime? _startedAt;
   int? _activeQuestId;
@@ -69,6 +98,7 @@ class StreamQuest with WidgetsBindingObserver {
   /// Returns `false` if activity recognition permission was denied (Android) or tracking failed.
   Future<bool> startSession(Quest catalogQuest) async {
     stopSession();
+    clearLastRunResult();
 
     if (kIsWeb) {
       return false;
@@ -126,7 +156,7 @@ class StreamQuest with WidgetsBindingObserver {
     );
 
     _startElapsedTicker();
-    _startBackendPolling();
+    await refreshActiveRunProgress();
 
     return true;
   }
@@ -140,20 +170,21 @@ class StreamQuest with WidgetsBindingObserver {
     });
   }
 
-  void _startBackendPolling() {
-    _backendPoller?.cancel();
-    _backendPoller = Timer.periodic(const Duration(seconds: 1), (_) async {
-      if (_isBackendPollInFlight) return;
-      if (_session == null) return;
-      _isBackendPollInFlight = true;
-      try {
-        await ApiService.instance.client.apiQuestRunsActiveGet();
-      } catch (_) {
-        // best-effort polling; ignore transient failures
-      } finally {
-        _isBackendPollInFlight = false;
+  Future<void> refreshActiveRunProgress() async {
+    if (_session == null) return;
+    try {
+      final res = await ApiService.instance.client.apiQuestRunsActiveGet();
+      final body = res.body;
+      if (res.isSuccessful && body != null) {
+        _progressController?.add(body);
       }
-    });
+    } catch (_) {
+      // ignore: UI can continue with existing state
+    }
+  }
+
+  void setActiveRunProgress(QuestRunProgressResponse progress) {
+    _progressController?.add(progress);
   }
 
   @override
@@ -224,9 +255,8 @@ class StreamQuest with WidgetsBindingObserver {
     _cancelStepSubscriptionSilently();
     _elapsedTicker?.cancel();
     _elapsedTicker = null;
-    _backendPoller?.cancel();
-    _backendPoller = null;
-    _isBackendPollInFlight = false;
+    _activeRunProgress = null;
+    _progressController?.add(null);
     _baselineTotalSteps = null;
     _startedAt = null;
     _activeQuestId = null;
@@ -234,9 +264,16 @@ class StreamQuest with WidgetsBindingObserver {
     _controller.add(null);
   }
 
+  void clearLastRunResult() {
+    _lastRunResult = null;
+    _lastRunResultController?.add(null);
+  }
+
   void dispose() {
     stopSession();
     WidgetsBinding.instance.removeObserver(this);
     _controller.close();
+    _progressController?.close();
+    _lastRunResultController?.close();
   }
 }

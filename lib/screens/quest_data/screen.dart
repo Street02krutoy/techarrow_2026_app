@@ -63,6 +63,7 @@ class _QuestDataScreenState extends State<QuestDataScreen> {
 
   void _showStartQuestSheet(BuildContext context) {
     var soloMode = true;
+    var isStartingRun = false;
 
     showModalBottomSheet<void>(
       context: context,
@@ -177,14 +178,45 @@ class _QuestDataScreenState extends State<QuestDataScreen> {
                   const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: () async {
-                      await ApiService.instance.client.apiQuestRunsPost(
+                      if (isStartingRun) return;
+                      setModalState(() {
+                        isStartingRun = true;
+                      });
+
+                      final startRes = await ApiService.instance.client.apiQuestRunsPost(
                         body: QuestRunStartRequest(questId: widget.quest.id),
                       );
                       if (!context.mounted) return;
+                      if (!startRes.isSuccessful || startRes.body == null) {
+                        setModalState(() {
+                          isStartingRun = false;
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Не удалось запустить квест'),
+                          ),
+                        );
+                        return;
+                      }
+
                       final navigator = Navigator.of(context);
                       final surface = Theme.of(context).colorScheme.surface;
-                      await StreamQuestScope.of(context).startSession(_quest);
+                      final started = await StreamQuestScope.of(context).startSession(
+                        _quest,
+                      );
                       if (!context.mounted) return;
+                      if (!started) {
+                        setModalState(() {
+                          isStartingRun = false;
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Не удалось включить локальный трекинг'),
+                          ),
+                        );
+                        return;
+                      }
+
                       navigator.pop(); // close bottom sheet
                       if (soloMode) {
                         navigator.push(
@@ -220,7 +252,7 @@ class _QuestDataScreenState extends State<QuestDataScreen> {
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Text(
-                        'Начать',
+                        isStartingRun ? 'Запуск...' : 'Начать',
                         style: Theme.of(sheetContext).textTheme.titleLarge,
                       ),
                     ),
