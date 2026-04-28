@@ -29,37 +29,42 @@ class _IndexScreenState extends State<IndexScreen> {
           ProfilePage(key: ValueKey('profile-${_refreshNonce[4]}')),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (value) {
-          setState(() {
-            _currentIndex = value;
-            _refreshNonce[value]++;
-          });
-        },
-        type: BottomNavigationBarType.fixed,
-        items: [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            label: "Главная",
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+          child: BottomNavigationBar(
+            currentIndex: _currentIndex,
+            onTap: (value) {
+              setState(() {
+                _currentIndex = value;
+                _refreshNonce[value]++;
+              });
+            },
+            type: BottomNavigationBarType.fixed,
+            items: [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.home_outlined),
+                label: "Главная",
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.groups_outlined),
+                label: "Команда",
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.leaderboard_outlined),
+                label: "Рейтинг",
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.favorite_outline),
+                label: "Избранное",
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.person_outline),
+                label: "Профиль",
+              ),
+            ],
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.groups_outlined),
-            label: "Команда",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.leaderboard_outlined),
-            label: "Рейтинг",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.favorite_outline),
-            label: "Избранное",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            label: "Профиль",
-          ),
-        ],
+        ),
       ),
     );
   }

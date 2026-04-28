@@ -121,14 +121,18 @@ class _MainPageState extends State<MainPage> {
     });
 
     try {
+      final f = _activeFilters;
+      final hasNear =
+          f?.nearLatitude != null && f?.nearLongitude != null;
+
       final response = await ApiService.instance.getQuests(
         limit: _pageSize,
         offset: _offset,
-        minDurationMinutes: _activeFilters?.minDurationMinutes,
-        maxDurationMinutes: _activeFilters?.maxDurationMinutes,
-        difficulties: _activeFilters?.difficulties,
-        nearLatitude: _activeFilters?.nearLatitude,
-        nearLongitude: _activeFilters?.nearLongitude,
+        minDurationMinutes: f?.minDurationMinutes,
+        maxDurationMinutes: f?.maxDurationMinutes,
+        difficulties: f?.difficulties,
+        nearLatitude: hasNear ? f!.nearLatitude : null,
+        nearLongitude: hasNear ? f!.nearLongitude : null,
         search: _searchController.text.trim().isEmpty
             ? null
             : _searchController.text.trim(),
@@ -507,9 +511,9 @@ class _MainFiltersSheetState extends State<_MainFiltersSheet> {
   final TextEditingController _maxDurationController = TextEditingController();
   int? _difficulty;
   bool _nearMe = false;
-  bool _nearMeEnabled = false;
   double? _nearLatitude;
   double? _nearLongitude;
+  bool _nearMeBusy = false;
 
   @override
   void initState() {
@@ -521,11 +525,10 @@ class _MainFiltersSheetState extends State<_MainFiltersSheet> {
       _maxDurationController.text =
           initial.maxDurationMinutes?.toString() ?? '';
       _difficulty = initial.singleDifficulty;
-      _nearMe = initial.nearMe;
+      _nearMe = initial.nearLatitude != null && initial.nearLongitude != null;
       _nearLatitude = initial.nearLatitude;
       _nearLongitude = initial.nearLongitude;
     }
-    _syncNearMeAvailability();
   }
 
   @override
@@ -546,25 +549,84 @@ class _MainFiltersSheetState extends State<_MainFiltersSheet> {
     };
   }
 
-  Future<void> _syncNearMeAvailability() async {
-    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    final permission = await Geolocator.checkPermission();
-    if (!mounted) return;
-    final allowed =
-        serviceEnabled &&
-        (permission == LocationPermission.always ||
-            permission == LocationPermission.whileInUse);
+  Future<void> _requestNearMeLocation() async {
     setState(() {
-      _nearMeEnabled = allowed;
-      if (!allowed) {
+      _nearMeBusy = true;
+      _nearMe = false;
+      _nearLatitude = null;
+      _nearLongitude = null;
+    });
+
+    Future<void> fail(String message) async {
+      if (!mounted) return;
+      AppSnackBar.error(context, message);
+      setState(() {
+        _nearMeBusy = false;
         _nearMe = false;
         _nearLatitude = null;
         _nearLongitude = null;
+      });
+    }
+
+    try {
+      var serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        serviceEnabled = await Geolocator.openLocationSettings();
+        if (!mounted) return;
+        serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        if (!serviceEnabled) {
+          await fail('Включите геолокацию в настройках системы');
+          return;
+        }
       }
-    });
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.deniedForever) {
+        await Geolocator.openAppSettings();
+        await fail(
+          'Разрешите доступ к геолокации в настройках приложения',
+        );
+        return;
+      }
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied) {
+        await fail('Нужно разрешение на геолокацию');
+        return;
+      }
+      if (permission == LocationPermission.deniedForever) {
+        await Geolocator.openAppSettings();
+        await fail(
+          'Разрешите доступ к геолокации в настройках приложения',
+        );
+        return;
+      }
+      if (permission != LocationPermission.always &&
+          permission != LocationPermission.whileInUse) {
+        await fail('Нет доступа к геолокации');
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.medium,
+        ),
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _nearMe = true;
+        _nearLatitude = position.latitude;
+        _nearLongitude = position.longitude;
+        _nearMeBusy = false;
+      });
+    } catch (_) {
+      await fail('Не удалось получить геопозицию');
+    }
   }
 
-  Future<void> _onNearMeChanged(bool? value) async {
+  void _onNearMeToggle(bool? value) {
     if (value != true) {
       setState(() {
         _nearMe = false;
@@ -573,24 +635,7 @@ class _MainFiltersSheetState extends State<_MainFiltersSheet> {
       });
       return;
     }
-    if (!_nearMeEnabled) return;
-    try {
-      final position = await Geolocator.getCurrentPosition();
-      if (!mounted) return;
-      setState(() {
-        _nearMe = true;
-        _nearLatitude = position.latitude;
-        _nearLongitude = position.longitude;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _nearMe = false;
-        _nearLatitude = null;
-        _nearLongitude = null;
-      });
-      AppSnackBar.error(context, 'Не удалось получить геопозицию');
-    }
+    unawaited(_requestNearMeLocation());
   }
 
   @override
@@ -718,29 +763,6 @@ class _MainFiltersSheetState extends State<_MainFiltersSheet> {
                   onChanged: (value) => setState(() => _difficulty = value),
                 ),
                 const SizedBox(height: 10),
-                CheckboxListTile(
-                  value: _nearMe,
-                  onChanged: _nearMeEnabled ? _onNearMeChanged : null,
-                  title: Text(
-                    'Около меня',
-                    style: textTheme.labelLarge?.copyWith(
-                      color: colorScheme.onSurface,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  subtitle: !_nearMeEnabled
-                      ? Text(
-                          'Доступ к геолокации не выдан',
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        )
-                      : null,
-                  controlAffinity: ListTileControlAffinity.leading,
-                  contentPadding: EdgeInsets.zero,
-                  activeColor: colorScheme.primary,
-                ),
-                const SizedBox(height: 14),
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
@@ -803,6 +825,34 @@ class _MainFiltersSheetState extends State<_MainFiltersSheet> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 14),
+                CheckboxListTile(
+                  value: _nearMe,
+                  onChanged: _nearMeBusy ? null : _onNearMeToggle,
+                  title: Text(
+                    'Квесты около меня',
+                    style: textTheme.labelLarge?.copyWith(
+                      color: colorScheme.onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'По координатам при поиске квестов',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  secondary: _nearMeBusy
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : null,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  activeColor: colorScheme.primary,
+                ),
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
@@ -829,8 +879,8 @@ class _MainFiltersSheetState extends State<_MainFiltersSheet> {
                               ? [_difficulty]
                               : null,
                           nearMe: _nearMe,
-                          nearLatitude: _nearLatitude,
-                          nearLongitude: _nearLongitude,
+                          nearLatitude: _nearMe ? _nearLatitude : null,
+                          nearLongitude: _nearMe ? _nearLongitude : null,
                           minDurationMinutes: minDuration,
                           maxDurationMinutes: maxDuration,
                         ),
@@ -878,5 +928,5 @@ class _QuestFilters {
       minDurationMinutes != null ||
       maxDurationMinutes != null ||
       (difficulties?.isNotEmpty ?? false) ||
-      nearMe;
+      (nearLatitude != null && nearLongitude != null);
 }
