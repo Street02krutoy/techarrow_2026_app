@@ -28,6 +28,7 @@ class StreamQuestNotifier extends ChangeNotifier {
   StreamQuestNotifier() : streamQuest = StreamQuest() {
     streamQuest.onActiveSessionChanged.listen((_) => notifyListeners());
     streamQuest.onActiveRunProgressChanged.listen((_) => notifyListeners());
+    streamQuest.onActiveTeamRunProgressChanged.listen((_) => notifyListeners());
     streamQuest.onLastRunResultChanged.listen((_) => notifyListeners());
   }
 
@@ -59,8 +60,14 @@ class StreamQuest with WidgetsBindingObserver {
     _lastRunResultController?.stream.listen((QuestRunHistoryItem? next) {
       _lastRunResult = next;
     });
+    _teamProgressController =
+        StreamController<TeamQuestRunProgressResponse?>.broadcast();
+    _teamProgressController?.stream.listen((TeamQuestRunProgressResponse? next) {
+      _activeTeamRunProgress = next;
+    });
     WidgetsBinding.instance.addObserver(this);
     unawaited(_restoreActiveRunOnInit());
+    _startTeamLongPolling();
   }
 
   StreamingQuestSession? _session;
@@ -82,6 +89,15 @@ class StreamQuest with WidgetsBindingObserver {
 
   StreamController<QuestRunProgressResponse?>? _progressController;
 
+  TeamQuestRunProgressResponse? _activeTeamRunProgress;
+  TeamQuestRunProgressResponse? get activeTeamRunProgress =>
+      _activeTeamRunProgress;
+
+  Stream<TeamQuestRunProgressResponse?> get onActiveTeamRunProgressChanged =>
+      _teamProgressController?.stream ?? const Stream.empty();
+
+  StreamController<TeamQuestRunProgressResponse?>? _teamProgressController;
+
   QuestRunHistoryItem? _lastRunResult;
   QuestRunHistoryItem? get lastRunResult => _lastRunResult;
 
@@ -96,6 +112,7 @@ class StreamQuest with WidgetsBindingObserver {
   DateTime? _startedAt;
   int? _activeQuestId;
   String? _activeQuestName;
+  Timer? _teamLongPoller;
 
   /// Starts tracking [catalogQuest]: pedometer steps since now and wall time from [startedAt].
   ///
@@ -173,6 +190,30 @@ class StreamQuest with WidgetsBindingObserver {
       if (s == null) return;
       _emit(s.copyWith());
     });
+  }
+
+  void _startTeamLongPolling() {
+    _teamLongPoller?.cancel();
+    _teamLongPoller = Timer.periodic(const Duration(seconds: 2), (_) {
+      unawaited(_refreshTeamRunProgress());
+    });
+    unawaited(_refreshTeamRunProgress());
+  }
+
+  Future<void> _refreshTeamRunProgress() async {
+    // While solo run is active, ignore team polling updates.
+    if (_activeQuestId != null) return;
+    try {
+      final res = await ApiService.instance.client.apiTeamQuestRunsActiveGet();
+      final body = res.body;
+      if (res.isSuccessful && body != null) {
+        _teamProgressController?.add(body);
+      } else {
+        _teamProgressController?.add(null);
+      }
+    } catch (_) {
+      // keep previous value on transient failures
+    }
   }
 
   Future<void> refreshActiveRunProgress({
@@ -361,9 +402,11 @@ class StreamQuest with WidgetsBindingObserver {
 
   void dispose() {
     stopSession();
+    _teamLongPoller?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _controller.close();
     _progressController?.close();
+    _teamProgressController?.close();
     _lastRunResultController?.close();
   }
 }

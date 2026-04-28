@@ -35,12 +35,25 @@ class _MainPageState extends State<MainPage> {
   bool _isLoadingMore = false;
   String? _loadError;
   Timer? _searchDebounce;
+  StreamSubscription<TeamQuestRunProgressResponse?>? _teamProgressSub;
+  int? _lastNotifiedTeamRunId;
 
   @override
   void initState() {
     super.initState();
     _refreshQuests();
     _searchController.addListener(_onSearchChanged);
+    _teamProgressSub = StreamQuestScope.of(
+      context,
+    ).onActiveTeamRunProgressChanged.listen((progress) {
+      if (!mounted || progress == null) return;
+      if (progress.status.value != 'in_progress') return;
+      if (_lastNotifiedTeamRunId == progress.runId) return;
+      _lastNotifiedTeamRunId = progress.runId;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Командный квест начался')),
+      );
+    });
     _scrollController.addListener(() {
       final scrolled = _scrollController.offset > 0;
       if (scrolled != _isScrolled) {
@@ -130,6 +143,7 @@ class _MainPageState extends State<MainPage> {
   @override
   void dispose() {
     _searchDebounce?.cancel();
+    _teamProgressSub?.cancel();
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _scrollController.dispose();
