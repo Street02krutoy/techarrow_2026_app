@@ -6,6 +6,45 @@ part of 'swagger.swagger.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
+AchievementPageResponse _$AchievementPageResponseFromJson(
+  Map<String, dynamic> json,
+) => AchievementPageResponse(
+  items:
+      (json['items'] as List<dynamic>?)
+          ?.map((e) => AchievementResponse.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      [],
+  total: (json['total'] as num).toInt(),
+  limit: (json['limit'] as num).toInt(),
+  offset: (json['offset'] as num).toInt(),
+);
+
+Map<String, dynamic> _$AchievementPageResponseToJson(
+  AchievementPageResponse instance,
+) => <String, dynamic>{
+  'items': instance.items.map((e) => e.toJson()).toList(),
+  'total': instance.total,
+  'limit': instance.limit,
+  'offset': instance.offset,
+};
+
+AchievementResponse _$AchievementResponseFromJson(Map<String, dynamic> json) =>
+    AchievementResponse(
+      id: (json['id'] as num).toInt(),
+      title: json['title'] as String,
+      description: json['description'] as String,
+      imageFileId: json['image_file_id'] as String?,
+    );
+
+Map<String, dynamic> _$AchievementResponseToJson(
+  AchievementResponse instance,
+) => <String, dynamic>{
+  'id': instance.id,
+  'title': instance.title,
+  'description': instance.description,
+  'image_file_id': instance.imageFileId,
+};
+
 BodyCreateQuestApiQuestsPost _$BodyCreateQuestApiQuestsPostFromJson(
   Map<String, dynamic> json,
 ) => BodyCreateQuestApiQuestsPost(
@@ -31,6 +70,18 @@ Map<String, dynamic> _$BodyCreateQuestApiQuestsPostToJson(
   'rules_and_warnings': instance.rulesAndWarnings,
   'points': instance.points,
 };
+
+BodyUploadAchievementImageApiAchievementsAchievementIdImagePost
+_$BodyUploadAchievementImageApiAchievementsAchievementIdImagePostFromJson(
+  Map<String, dynamic> json,
+) => BodyUploadAchievementImageApiAchievementsAchievementIdImagePost(
+  image: json['image'] as String,
+);
+
+Map<String, dynamic>
+_$BodyUploadAchievementImageApiAchievementsAchievementIdImagePostToJson(
+  BodyUploadAchievementImageApiAchievementsAchievementIdImagePost instance,
+) => <String, dynamic>{'image': instance.image};
 
 CheckpointCurrentView _$CheckpointCurrentViewFromJson(
   Map<String, dynamic> json,
@@ -206,6 +257,7 @@ QuestDetailResponse _$QuestDetailResponseFromJson(Map<String, dynamic> json) =>
         json['creator'] as Map<String, dynamic>,
       ),
       isFavourite: json['is_favourite'] as bool? ?? false,
+      isCompleted: json['is_completed'] as bool? ?? false,
       points:
           (json['points'] as List<dynamic>?)
               ?.map(
@@ -232,6 +284,7 @@ Map<String, dynamic> _$QuestDetailResponseToJson(
   'longitude': instance.longitude,
   'creator': instance.creator.toJson(),
   'is_favourite': instance.isFavourite,
+  'is_completed': instance.isCompleted,
   'points': instance.points.map((e) => e.toJson()).toList(),
 };
 
@@ -303,6 +356,7 @@ QuestResponse _$QuestResponseFromJson(Map<String, dynamic> json) =>
         json['creator'] as Map<String, dynamic>,
       ),
       isFavourite: json['is_favourite'] as bool? ?? false,
+      isCompleted: json['is_completed'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$QuestResponseToJson(QuestResponse instance) =>
@@ -321,6 +375,7 @@ Map<String, dynamic> _$QuestResponseToJson(QuestResponse instance) =>
       'longitude': instance.longitude,
       'creator': instance.creator.toJson(),
       'is_favourite': instance.isFavourite,
+      'is_completed': instance.isCompleted,
     };
 
 QuestRunAnswerRequest _$QuestRunAnswerRequestFromJson(
@@ -666,6 +721,50 @@ Map<String, dynamic> _$TokenPairResponseToJson(TokenPairResponse instance) =>
       'token_type': instance.tokenType,
       'user': instance.user.toJson(),
     };
+
+UserAchievementPageResponse _$UserAchievementPageResponseFromJson(
+  Map<String, dynamic> json,
+) => UserAchievementPageResponse(
+  items:
+      (json['items'] as List<dynamic>?)
+          ?.map(
+            (e) => UserAchievementResponse.fromJson(e as Map<String, dynamic>),
+          )
+          .toList() ??
+      [],
+  total: (json['total'] as num).toInt(),
+  limit: (json['limit'] as num).toInt(),
+  offset: (json['offset'] as num).toInt(),
+);
+
+Map<String, dynamic> _$UserAchievementPageResponseToJson(
+  UserAchievementPageResponse instance,
+) => <String, dynamic>{
+  'items': instance.items.map((e) => e.toJson()).toList(),
+  'total': instance.total,
+  'limit': instance.limit,
+  'offset': instance.offset,
+};
+
+UserAchievementResponse _$UserAchievementResponseFromJson(
+  Map<String, dynamic> json,
+) => UserAchievementResponse(
+  id: (json['id'] as num).toInt(),
+  title: json['title'] as String,
+  description: json['description'] as String,
+  imageFileId: json['image_file_id'] as String?,
+  awardedAt: DateTime.parse(json['awarded_at'] as String),
+);
+
+Map<String, dynamic> _$UserAchievementResponseToJson(
+  UserAchievementResponse instance,
+) => <String, dynamic>{
+  'id': instance.id,
+  'title': instance.title,
+  'description': instance.description,
+  'image_file_id': instance.imageFileId,
+  'awarded_at': instance.awardedAt.toIso8601String(),
+};
 
 UserCreate _$UserCreateFromJson(Map<String, dynamic> json) => UserCreate(
   email: json['email'] as String,

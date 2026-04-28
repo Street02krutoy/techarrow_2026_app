@@ -92,7 +92,7 @@ abstract class Swagger extends ChopperService {
       consumes: [],
       produces: [],
       security: [],
-      tags: ["Common"],
+      tags: ["Files"],
       deprecated: false,
     ),
   });
@@ -288,6 +288,119 @@ abstract class Swagger extends ChopperService {
       produces: [],
       security: ["HTTPBearer"],
       tags: ["Authorization"],
+      deprecated: false,
+    ),
+  });
+
+  ///Get All Achievements
+  ///@param limit
+  ///@param offset
+  Future<chopper.Response<AchievementPageResponse>> apiAchievementsGet({
+    int? limit,
+    int? offset,
+  }) {
+    generatedMapping.putIfAbsent(
+      AchievementPageResponse,
+      () => AchievementPageResponse.fromJsonFactory,
+    );
+
+    return _apiAchievementsGet(limit: limit, offset: offset);
+  }
+
+  ///Get All Achievements
+  ///@param limit
+  ///@param offset
+  @GET(path: '/api/achievements')
+  Future<chopper.Response<AchievementPageResponse>> _apiAchievementsGet({
+    @Query('limit') int? limit,
+    @Query('offset') int? offset,
+    @chopper.Tag()
+    SwaggerMetaData swaggerMetaData = const SwaggerMetaData(
+      description: '',
+      summary: 'Get All Achievements',
+      operationId: 'get_all_achievements_api_achievements_get',
+      consumes: [],
+      produces: [],
+      security: [],
+      tags: ["Achievements"],
+      deprecated: false,
+    ),
+  });
+
+  ///Get My Achievements
+  ///@param limit
+  ///@param offset
+  Future<chopper.Response<UserAchievementPageResponse>> apiAchievementsMeGet({
+    int? limit,
+    int? offset,
+  }) {
+    generatedMapping.putIfAbsent(
+      UserAchievementPageResponse,
+      () => UserAchievementPageResponse.fromJsonFactory,
+    );
+
+    return _apiAchievementsMeGet(limit: limit, offset: offset);
+  }
+
+  ///Get My Achievements
+  ///@param limit
+  ///@param offset
+  @GET(path: '/api/achievements/me')
+  Future<chopper.Response<UserAchievementPageResponse>> _apiAchievementsMeGet({
+    @Query('limit') int? limit,
+    @Query('offset') int? offset,
+    @chopper.Tag()
+    SwaggerMetaData swaggerMetaData = const SwaggerMetaData(
+      description: '',
+      summary: 'Get My Achievements',
+      operationId: 'get_my_achievements_api_achievements_me_get',
+      consumes: [],
+      produces: [],
+      security: ["HTTPBearer"],
+      tags: ["Achievements"],
+      deprecated: false,
+    ),
+  });
+
+  ///Upload Achievement Image
+  ///@param achievement_id
+  Future<chopper.Response<AchievementResponse>>
+  apiAchievementsAchievementIdImagePost({
+    required int? achievementId,
+    required BodyUploadAchievementImageApiAchievementsAchievementIdImagePost
+    body,
+  }) {
+    generatedMapping.putIfAbsent(
+      AchievementResponse,
+      () => AchievementResponse.fromJsonFactory,
+    );
+
+    return _apiAchievementsAchievementIdImagePost(
+      achievementId: achievementId,
+      body: body,
+    );
+  }
+
+  ///Upload Achievement Image
+  ///@param achievement_id
+  @POST(path: '/api/achievements/{achievement_id}/image', optionalBody: true)
+  @Multipart()
+  Future<chopper.Response<AchievementResponse>>
+  _apiAchievementsAchievementIdImagePost({
+    @Path('achievement_id') required int? achievementId,
+    @Part()
+    required BodyUploadAchievementImageApiAchievementsAchievementIdImagePost
+    body,
+    @chopper.Tag()
+    SwaggerMetaData swaggerMetaData = const SwaggerMetaData(
+      description: '',
+      summary: 'Upload Achievement Image',
+      operationId:
+          'upload_achievement_image_api_achievements__achievement_id__image_post',
+      consumes: [],
+      produces: [],
+      security: ["HTTPBearer"],
+      tags: ["Achievements"],
       deprecated: false,
     ),
   });
@@ -654,6 +767,30 @@ abstract class Swagger extends ChopperService {
       description: '',
       summary: 'Get Favorite Quests',
       operationId: 'get_favorite_quests_api_quests_favorites_get',
+      consumes: [],
+      produces: [],
+      security: ["HTTPBearer"],
+      tags: ["Quests"],
+      deprecated: false,
+    ),
+  });
+
+  ///Export Quest To Pdf
+  ///@param quest_id
+  Future<chopper.Response> apiQuestsQuestIdExportGet({required int? questId}) {
+    return _apiQuestsQuestIdExportGet(questId: questId);
+  }
+
+  ///Export Quest To Pdf
+  ///@param quest_id
+  @GET(path: '/api/quests/{quest_id}/export')
+  Future<chopper.Response> _apiQuestsQuestIdExportGet({
+    @Path('quest_id') required int? questId,
+    @chopper.Tag()
+    SwaggerMetaData swaggerMetaData = const SwaggerMetaData(
+      description: '',
+      summary: 'Export Quest To Pdf',
+      operationId: 'export_quest_to_pdf_api_quests__quest_id__export_get',
       consumes: [],
       produces: [],
       security: ["HTTPBearer"],
@@ -1373,6 +1510,174 @@ abstract class Swagger extends ChopperService {
 }
 
 @JsonSerializable(explicitToJson: true)
+class AchievementPageResponse {
+  const AchievementPageResponse({
+    required this.items,
+    required this.total,
+    required this.limit,
+    required this.offset,
+  });
+
+  factory AchievementPageResponse.fromJson(Map<String, dynamic> json) =>
+      _$AchievementPageResponseFromJson(json);
+
+  static const toJsonFactory = _$AchievementPageResponseToJson;
+  Map<String, dynamic> toJson() => _$AchievementPageResponseToJson(this);
+
+  @JsonKey(name: 'items', defaultValue: <AchievementResponse>[])
+  final List<AchievementResponse> items;
+  @JsonKey(name: 'total')
+  final int total;
+  @JsonKey(name: 'limit')
+  final int limit;
+  @JsonKey(name: 'offset')
+  final int offset;
+  static const fromJsonFactory = _$AchievementPageResponseFromJson;
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other is AchievementPageResponse &&
+            (identical(other.items, items) ||
+                const DeepCollectionEquality().equals(other.items, items)) &&
+            (identical(other.total, total) ||
+                const DeepCollectionEquality().equals(other.total, total)) &&
+            (identical(other.limit, limit) ||
+                const DeepCollectionEquality().equals(other.limit, limit)) &&
+            (identical(other.offset, offset) ||
+                const DeepCollectionEquality().equals(other.offset, offset)));
+  }
+
+  @override
+  String toString() => jsonEncode(this);
+
+  @override
+  int get hashCode =>
+      const DeepCollectionEquality().hash(items) ^
+      const DeepCollectionEquality().hash(total) ^
+      const DeepCollectionEquality().hash(limit) ^
+      const DeepCollectionEquality().hash(offset) ^
+      runtimeType.hashCode;
+}
+
+extension $AchievementPageResponseExtension on AchievementPageResponse {
+  AchievementPageResponse copyWith({
+    List<AchievementResponse>? items,
+    int? total,
+    int? limit,
+    int? offset,
+  }) {
+    return AchievementPageResponse(
+      items: items ?? this.items,
+      total: total ?? this.total,
+      limit: limit ?? this.limit,
+      offset: offset ?? this.offset,
+    );
+  }
+
+  AchievementPageResponse copyWithWrapped({
+    Wrapped<List<AchievementResponse>>? items,
+    Wrapped<int>? total,
+    Wrapped<int>? limit,
+    Wrapped<int>? offset,
+  }) {
+    return AchievementPageResponse(
+      items: (items != null ? items.value : this.items),
+      total: (total != null ? total.value : this.total),
+      limit: (limit != null ? limit.value : this.limit),
+      offset: (offset != null ? offset.value : this.offset),
+    );
+  }
+}
+
+@JsonSerializable(explicitToJson: true)
+class AchievementResponse {
+  const AchievementResponse({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.imageFileId,
+  });
+
+  factory AchievementResponse.fromJson(Map<String, dynamic> json) =>
+      _$AchievementResponseFromJson(json);
+
+  static const toJsonFactory = _$AchievementResponseToJson;
+  Map<String, dynamic> toJson() => _$AchievementResponseToJson(this);
+
+  @JsonKey(name: 'id')
+  final int id;
+  @JsonKey(name: 'title')
+  final String title;
+  @JsonKey(name: 'description')
+  final String description;
+  @JsonKey(name: 'image_file_id')
+  final String? imageFileId;
+  static const fromJsonFactory = _$AchievementResponseFromJson;
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other is AchievementResponse &&
+            (identical(other.id, id) ||
+                const DeepCollectionEquality().equals(other.id, id)) &&
+            (identical(other.title, title) ||
+                const DeepCollectionEquality().equals(other.title, title)) &&
+            (identical(other.description, description) ||
+                const DeepCollectionEquality().equals(
+                  other.description,
+                  description,
+                )) &&
+            (identical(other.imageFileId, imageFileId) ||
+                const DeepCollectionEquality().equals(
+                  other.imageFileId,
+                  imageFileId,
+                )));
+  }
+
+  @override
+  String toString() => jsonEncode(this);
+
+  @override
+  int get hashCode =>
+      const DeepCollectionEquality().hash(id) ^
+      const DeepCollectionEquality().hash(title) ^
+      const DeepCollectionEquality().hash(description) ^
+      const DeepCollectionEquality().hash(imageFileId) ^
+      runtimeType.hashCode;
+}
+
+extension $AchievementResponseExtension on AchievementResponse {
+  AchievementResponse copyWith({
+    int? id,
+    String? title,
+    String? description,
+    String? imageFileId,
+  }) {
+    return AchievementResponse(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      imageFileId: imageFileId ?? this.imageFileId,
+    );
+  }
+
+  AchievementResponse copyWithWrapped({
+    Wrapped<int>? id,
+    Wrapped<String>? title,
+    Wrapped<String>? description,
+    Wrapped<String?>? imageFileId,
+  }) {
+    return AchievementResponse(
+      id: (id != null ? id.value : this.id),
+      title: (title != null ? title.value : this.title),
+      description: (description != null ? description.value : this.description),
+      imageFileId: (imageFileId != null ? imageFileId.value : this.imageFileId),
+    );
+  }
+}
+
+@JsonSerializable(explicitToJson: true)
 class BodyCreateQuestApiQuestsPost {
   const BodyCreateQuestApiQuestsPost({
     this.image,
@@ -1509,6 +1814,65 @@ extension $BodyCreateQuestApiQuestsPostExtension
           ? rulesAndWarnings.value
           : this.rulesAndWarnings),
       points: (points != null ? points.value : this.points),
+    );
+  }
+}
+
+@JsonSerializable(explicitToJson: true)
+class BodyUploadAchievementImageApiAchievementsAchievementIdImagePost {
+  const BodyUploadAchievementImageApiAchievementsAchievementIdImagePost({
+    required this.image,
+  });
+
+  factory BodyUploadAchievementImageApiAchievementsAchievementIdImagePost.fromJson(
+    Map<String, dynamic> json,
+  ) =>
+      _$BodyUploadAchievementImageApiAchievementsAchievementIdImagePostFromJson(
+        json,
+      );
+
+  static const toJsonFactory =
+      _$BodyUploadAchievementImageApiAchievementsAchievementIdImagePostToJson;
+  Map<String, dynamic> toJson() =>
+      _$BodyUploadAchievementImageApiAchievementsAchievementIdImagePostToJson(
+        this,
+      );
+
+  @JsonKey(name: 'image')
+  final String image;
+  static const fromJsonFactory =
+      _$BodyUploadAchievementImageApiAchievementsAchievementIdImagePostFromJson;
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other is BodyUploadAchievementImageApiAchievementsAchievementIdImagePost &&
+            (identical(other.image, image) ||
+                const DeepCollectionEquality().equals(other.image, image)));
+  }
+
+  @override
+  String toString() => jsonEncode(this);
+
+  @override
+  int get hashCode =>
+      const DeepCollectionEquality().hash(image) ^ runtimeType.hashCode;
+}
+
+extension $BodyUploadAchievementImageApiAchievementsAchievementIdImagePostExtension
+    on BodyUploadAchievementImageApiAchievementsAchievementIdImagePost {
+  BodyUploadAchievementImageApiAchievementsAchievementIdImagePost copyWith({
+    String? image,
+  }) {
+    return BodyUploadAchievementImageApiAchievementsAchievementIdImagePost(
+      image: image ?? this.image,
+    );
+  }
+
+  BodyUploadAchievementImageApiAchievementsAchievementIdImagePost
+  copyWithWrapped({Wrapped<String>? image}) {
+    return BodyUploadAchievementImageApiAchievementsAchievementIdImagePost(
+      image: (image != null ? image.value : this.image),
     );
   }
 }
@@ -2233,6 +2597,7 @@ class QuestDetailResponse {
     required this.longitude,
     required this.creator,
     this.isFavourite,
+    this.isCompleted,
     required this.points,
   });
 
@@ -2274,6 +2639,8 @@ class QuestDetailResponse {
   final QuestCreatorResponse creator;
   @JsonKey(name: 'is_favourite', defaultValue: false)
   final bool? isFavourite;
+  @JsonKey(name: 'is_completed', defaultValue: false)
+  final bool? isCompleted;
   @JsonKey(name: 'points', defaultValue: <QuestPointResponse>[])
   final List<QuestPointResponse> points;
   static const fromJsonFactory = _$QuestDetailResponseFromJson;
@@ -2343,6 +2710,11 @@ class QuestDetailResponse {
                   other.isFavourite,
                   isFavourite,
                 )) &&
+            (identical(other.isCompleted, isCompleted) ||
+                const DeepCollectionEquality().equals(
+                  other.isCompleted,
+                  isCompleted,
+                )) &&
             (identical(other.points, points) ||
                 const DeepCollectionEquality().equals(other.points, points)));
   }
@@ -2366,6 +2738,7 @@ class QuestDetailResponse {
       const DeepCollectionEquality().hash(longitude) ^
       const DeepCollectionEquality().hash(creator) ^
       const DeepCollectionEquality().hash(isFavourite) ^
+      const DeepCollectionEquality().hash(isCompleted) ^
       const DeepCollectionEquality().hash(points) ^
       runtimeType.hashCode;
 }
@@ -2386,6 +2759,7 @@ extension $QuestDetailResponseExtension on QuestDetailResponse {
     double? longitude,
     QuestCreatorResponse? creator,
     bool? isFavourite,
+    bool? isCompleted,
     List<QuestPointResponse>? points,
   }) {
     return QuestDetailResponse(
@@ -2403,6 +2777,7 @@ extension $QuestDetailResponseExtension on QuestDetailResponse {
       longitude: longitude ?? this.longitude,
       creator: creator ?? this.creator,
       isFavourite: isFavourite ?? this.isFavourite,
+      isCompleted: isCompleted ?? this.isCompleted,
       points: points ?? this.points,
     );
   }
@@ -2422,6 +2797,7 @@ extension $QuestDetailResponseExtension on QuestDetailResponse {
     Wrapped<double>? longitude,
     Wrapped<QuestCreatorResponse>? creator,
     Wrapped<bool?>? isFavourite,
+    Wrapped<bool?>? isCompleted,
     Wrapped<List<QuestPointResponse>>? points,
   }) {
     return QuestDetailResponse(
@@ -2445,6 +2821,7 @@ extension $QuestDetailResponseExtension on QuestDetailResponse {
       longitude: (longitude != null ? longitude.value : this.longitude),
       creator: (creator != null ? creator.value : this.creator),
       isFavourite: (isFavourite != null ? isFavourite.value : this.isFavourite),
+      isCompleted: (isCompleted != null ? isCompleted.value : this.isCompleted),
       points: (points != null ? points.value : this.points),
     );
   }
@@ -2725,6 +3102,7 @@ class QuestResponse {
     required this.longitude,
     required this.creator,
     this.isFavourite,
+    this.isCompleted,
   });
 
   factory QuestResponse.fromJson(Map<String, dynamic> json) =>
@@ -2765,6 +3143,8 @@ class QuestResponse {
   final QuestCreatorResponse creator;
   @JsonKey(name: 'is_favourite', defaultValue: false)
   final bool? isFavourite;
+  @JsonKey(name: 'is_completed', defaultValue: false)
+  final bool? isCompleted;
   static const fromJsonFactory = _$QuestResponseFromJson;
 
   @override
@@ -2831,6 +3211,11 @@ class QuestResponse {
                 const DeepCollectionEquality().equals(
                   other.isFavourite,
                   isFavourite,
+                )) &&
+            (identical(other.isCompleted, isCompleted) ||
+                const DeepCollectionEquality().equals(
+                  other.isCompleted,
+                  isCompleted,
                 )));
   }
 
@@ -2853,6 +3238,7 @@ class QuestResponse {
       const DeepCollectionEquality().hash(longitude) ^
       const DeepCollectionEquality().hash(creator) ^
       const DeepCollectionEquality().hash(isFavourite) ^
+      const DeepCollectionEquality().hash(isCompleted) ^
       runtimeType.hashCode;
 }
 
@@ -2872,6 +3258,7 @@ extension $QuestResponseExtension on QuestResponse {
     double? longitude,
     QuestCreatorResponse? creator,
     bool? isFavourite,
+    bool? isCompleted,
   }) {
     return QuestResponse(
       id: id ?? this.id,
@@ -2888,6 +3275,7 @@ extension $QuestResponseExtension on QuestResponse {
       longitude: longitude ?? this.longitude,
       creator: creator ?? this.creator,
       isFavourite: isFavourite ?? this.isFavourite,
+      isCompleted: isCompleted ?? this.isCompleted,
     );
   }
 
@@ -2906,6 +3294,7 @@ extension $QuestResponseExtension on QuestResponse {
     Wrapped<double>? longitude,
     Wrapped<QuestCreatorResponse>? creator,
     Wrapped<bool?>? isFavourite,
+    Wrapped<bool?>? isCompleted,
   }) {
     return QuestResponse(
       id: (id != null ? id.value : this.id),
@@ -2928,6 +3317,7 @@ extension $QuestResponseExtension on QuestResponse {
       longitude: (longitude != null ? longitude.value : this.longitude),
       creator: (creator != null ? creator.value : this.creator),
       isFavourite: (isFavourite != null ? isFavourite.value : this.isFavourite),
+      isCompleted: (isCompleted != null ? isCompleted.value : this.isCompleted),
     );
   }
 }
@@ -4581,6 +4971,187 @@ extension $TokenPairResponseExtension on TokenPairResponse {
           : this.refreshToken),
       tokenType: (tokenType != null ? tokenType.value : this.tokenType),
       user: (user != null ? user.value : this.user),
+    );
+  }
+}
+
+@JsonSerializable(explicitToJson: true)
+class UserAchievementPageResponse {
+  const UserAchievementPageResponse({
+    required this.items,
+    required this.total,
+    required this.limit,
+    required this.offset,
+  });
+
+  factory UserAchievementPageResponse.fromJson(Map<String, dynamic> json) =>
+      _$UserAchievementPageResponseFromJson(json);
+
+  static const toJsonFactory = _$UserAchievementPageResponseToJson;
+  Map<String, dynamic> toJson() => _$UserAchievementPageResponseToJson(this);
+
+  @JsonKey(name: 'items', defaultValue: <UserAchievementResponse>[])
+  final List<UserAchievementResponse> items;
+  @JsonKey(name: 'total')
+  final int total;
+  @JsonKey(name: 'limit')
+  final int limit;
+  @JsonKey(name: 'offset')
+  final int offset;
+  static const fromJsonFactory = _$UserAchievementPageResponseFromJson;
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other is UserAchievementPageResponse &&
+            (identical(other.items, items) ||
+                const DeepCollectionEquality().equals(other.items, items)) &&
+            (identical(other.total, total) ||
+                const DeepCollectionEquality().equals(other.total, total)) &&
+            (identical(other.limit, limit) ||
+                const DeepCollectionEquality().equals(other.limit, limit)) &&
+            (identical(other.offset, offset) ||
+                const DeepCollectionEquality().equals(other.offset, offset)));
+  }
+
+  @override
+  String toString() => jsonEncode(this);
+
+  @override
+  int get hashCode =>
+      const DeepCollectionEquality().hash(items) ^
+      const DeepCollectionEquality().hash(total) ^
+      const DeepCollectionEquality().hash(limit) ^
+      const DeepCollectionEquality().hash(offset) ^
+      runtimeType.hashCode;
+}
+
+extension $UserAchievementPageResponseExtension on UserAchievementPageResponse {
+  UserAchievementPageResponse copyWith({
+    List<UserAchievementResponse>? items,
+    int? total,
+    int? limit,
+    int? offset,
+  }) {
+    return UserAchievementPageResponse(
+      items: items ?? this.items,
+      total: total ?? this.total,
+      limit: limit ?? this.limit,
+      offset: offset ?? this.offset,
+    );
+  }
+
+  UserAchievementPageResponse copyWithWrapped({
+    Wrapped<List<UserAchievementResponse>>? items,
+    Wrapped<int>? total,
+    Wrapped<int>? limit,
+    Wrapped<int>? offset,
+  }) {
+    return UserAchievementPageResponse(
+      items: (items != null ? items.value : this.items),
+      total: (total != null ? total.value : this.total),
+      limit: (limit != null ? limit.value : this.limit),
+      offset: (offset != null ? offset.value : this.offset),
+    );
+  }
+}
+
+@JsonSerializable(explicitToJson: true)
+class UserAchievementResponse {
+  const UserAchievementResponse({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.imageFileId,
+    required this.awardedAt,
+  });
+
+  factory UserAchievementResponse.fromJson(Map<String, dynamic> json) =>
+      _$UserAchievementResponseFromJson(json);
+
+  static const toJsonFactory = _$UserAchievementResponseToJson;
+  Map<String, dynamic> toJson() => _$UserAchievementResponseToJson(this);
+
+  @JsonKey(name: 'id')
+  final int id;
+  @JsonKey(name: 'title')
+  final String title;
+  @JsonKey(name: 'description')
+  final String description;
+  @JsonKey(name: 'image_file_id')
+  final String? imageFileId;
+  @JsonKey(name: 'awarded_at')
+  final DateTime awardedAt;
+  static const fromJsonFactory = _$UserAchievementResponseFromJson;
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other is UserAchievementResponse &&
+            (identical(other.id, id) ||
+                const DeepCollectionEquality().equals(other.id, id)) &&
+            (identical(other.title, title) ||
+                const DeepCollectionEquality().equals(other.title, title)) &&
+            (identical(other.description, description) ||
+                const DeepCollectionEquality().equals(
+                  other.description,
+                  description,
+                )) &&
+            (identical(other.imageFileId, imageFileId) ||
+                const DeepCollectionEquality().equals(
+                  other.imageFileId,
+                  imageFileId,
+                )) &&
+            (identical(other.awardedAt, awardedAt) ||
+                const DeepCollectionEquality().equals(
+                  other.awardedAt,
+                  awardedAt,
+                )));
+  }
+
+  @override
+  String toString() => jsonEncode(this);
+
+  @override
+  int get hashCode =>
+      const DeepCollectionEquality().hash(id) ^
+      const DeepCollectionEquality().hash(title) ^
+      const DeepCollectionEquality().hash(description) ^
+      const DeepCollectionEquality().hash(imageFileId) ^
+      const DeepCollectionEquality().hash(awardedAt) ^
+      runtimeType.hashCode;
+}
+
+extension $UserAchievementResponseExtension on UserAchievementResponse {
+  UserAchievementResponse copyWith({
+    int? id,
+    String? title,
+    String? description,
+    String? imageFileId,
+    DateTime? awardedAt,
+  }) {
+    return UserAchievementResponse(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      imageFileId: imageFileId ?? this.imageFileId,
+      awardedAt: awardedAt ?? this.awardedAt,
+    );
+  }
+
+  UserAchievementResponse copyWithWrapped({
+    Wrapped<int>? id,
+    Wrapped<String>? title,
+    Wrapped<String>? description,
+    Wrapped<String?>? imageFileId,
+    Wrapped<DateTime>? awardedAt,
+  }) {
+    return UserAchievementResponse(
+      id: (id != null ? id.value : this.id),
+      title: (title != null ? title.value : this.title),
+      description: (description != null ? description.value : this.description),
+      imageFileId: (imageFileId != null ? imageFileId.value : this.imageFileId),
+      awardedAt: (awardedAt != null ? awardedAt.value : this.awardedAt),
     );
   }
 }

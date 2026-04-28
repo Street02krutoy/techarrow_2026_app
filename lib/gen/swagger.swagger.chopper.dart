@@ -51,7 +51,7 @@ final class _$Swagger extends Swagger {
       consumes: [],
       produces: [],
       security: [],
-      tags: ["Common"],
+      tags: ["Files"],
       deprecated: false,
     ),
   }) {
@@ -242,6 +242,105 @@ final class _$Swagger extends Swagger {
       tag: swaggerMetaData,
     );
     return client.send<UserResponse, UserResponse>($request);
+  }
+
+  @override
+  Future<Response<AchievementPageResponse>> _apiAchievementsGet({
+    int? limit,
+    int? offset,
+    SwaggerMetaData swaggerMetaData = const SwaggerMetaData(
+      description: '',
+      summary: 'Get All Achievements',
+      operationId: 'get_all_achievements_api_achievements_get',
+      consumes: [],
+      produces: [],
+      security: [],
+      tags: ["Achievements"],
+      deprecated: false,
+    ),
+  }) {
+    final Uri $url = Uri.parse('/api/achievements');
+    final Map<String, dynamic> $params = <String, dynamic>{
+      'limit': limit,
+      'offset': offset,
+    };
+    final Request $request = Request(
+      'GET',
+      $url,
+      client.baseUrl,
+      parameters: $params,
+      tag: swaggerMetaData,
+    );
+    return client.send<AchievementPageResponse, AchievementPageResponse>(
+      $request,
+    );
+  }
+
+  @override
+  Future<Response<UserAchievementPageResponse>> _apiAchievementsMeGet({
+    int? limit,
+    int? offset,
+    SwaggerMetaData swaggerMetaData = const SwaggerMetaData(
+      description: '',
+      summary: 'Get My Achievements',
+      operationId: 'get_my_achievements_api_achievements_me_get',
+      consumes: [],
+      produces: [],
+      security: ["HTTPBearer"],
+      tags: ["Achievements"],
+      deprecated: false,
+    ),
+  }) {
+    final Uri $url = Uri.parse('/api/achievements/me');
+    final Map<String, dynamic> $params = <String, dynamic>{
+      'limit': limit,
+      'offset': offset,
+    };
+    final Request $request = Request(
+      'GET',
+      $url,
+      client.baseUrl,
+      parameters: $params,
+      tag: swaggerMetaData,
+    );
+    return client
+        .send<UserAchievementPageResponse, UserAchievementPageResponse>(
+          $request,
+        );
+  }
+
+  @override
+  Future<Response<AchievementResponse>> _apiAchievementsAchievementIdImagePost({
+    required int? achievementId,
+    required BodyUploadAchievementImageApiAchievementsAchievementIdImagePost
+    body,
+    SwaggerMetaData swaggerMetaData = const SwaggerMetaData(
+      description: '',
+      summary: 'Upload Achievement Image',
+      operationId:
+          'upload_achievement_image_api_achievements__achievement_id__image_post',
+      consumes: [],
+      produces: [],
+      security: ["HTTPBearer"],
+      tags: ["Achievements"],
+      deprecated: false,
+    ),
+  }) {
+    final Uri $url = Uri.parse('/api/achievements/${achievementId}/image');
+    final List<PartValue> $parts = <PartValue>[
+      PartValue<
+        BodyUploadAchievementImageApiAchievementsAchievementIdImagePost
+      >('body', body),
+    ];
+    final Request $request = Request(
+      'POST',
+      $url,
+      client.baseUrl,
+      parts: $parts,
+      multipart: true,
+      tag: swaggerMetaData,
+    );
+    return client.send<AchievementResponse, AchievementResponse>($request);
   }
 
   @override
@@ -519,6 +618,30 @@ final class _$Swagger extends Swagger {
       tag: swaggerMetaData,
     );
     return client.send<QuestPageResponse, QuestPageResponse>($request);
+  }
+
+  @override
+  Future<Response<dynamic>> _apiQuestsQuestIdExportGet({
+    required int? questId,
+    SwaggerMetaData swaggerMetaData = const SwaggerMetaData(
+      description: '',
+      summary: 'Export Quest To Pdf',
+      operationId: 'export_quest_to_pdf_api_quests__quest_id__export_get',
+      consumes: [],
+      produces: [],
+      security: ["HTTPBearer"],
+      tags: ["Quests"],
+      deprecated: false,
+    ),
+  }) {
+    final Uri $url = Uri.parse('/api/quests/${questId}/export');
+    final Request $request = Request(
+      'GET',
+      $url,
+      client.baseUrl,
+      tag: swaggerMetaData,
+    );
+    return client.send<dynamic, dynamic>($request);
   }
 
   @override
