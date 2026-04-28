@@ -317,13 +317,14 @@ class _MainPageState extends State<MainPage> {
 
   Widget buildHeaderCard(BuildContext context) {
     final quest = StreamQuestScope.of(context).activeSession!;
+    final progress = StreamQuestScope.of(context).activeRunProgress;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const CurrentQuestScreen()),
-        );
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const CurrentQuestScreen()));
       },
       child: Container(
         margin: EdgeInsets.symmetric(horizontal: 12),
@@ -354,8 +355,8 @@ class _MainPageState extends State<MainPage> {
                   Text(quest.name, style: TextStyle(fontSize: 18)),
                   SizedBox(height: 8),
                   _buildSegmentedProgressBar(
-                    totalSegments: 4,
-                    currentSegment: 1,
+                    totalSegments: progress?.totalCheckpoints ?? 4,
+                    currentSegment: progress?.currentStepIndex ?? 1,
                   ),
                   SizedBox(height: 8),
                   Text("Количество шагов: ${quest.steps}"),

@@ -60,6 +60,7 @@ class StreamQuest with WidgetsBindingObserver {
       _lastRunResult = next;
     });
     WidgetsBinding.instance.addObserver(this);
+    unawaited(_restoreActiveRunOnInit());
   }
 
   StreamingQuestSession? _session;
@@ -156,7 +157,7 @@ class StreamQuest with WidgetsBindingObserver {
     );
 
     _startElapsedTicker();
-    await refreshActiveRunProgress();
+    await refreshActiveRunProgress(maxAttempts: 5);
 
     return true;
   }
@@ -170,16 +171,27 @@ class StreamQuest with WidgetsBindingObserver {
     });
   }
 
-  Future<void> refreshActiveRunProgress() async {
-    if (_session == null) return;
-    try {
-      final res = await ApiService.instance.client.apiQuestRunsActiveGet();
-      final body = res.body;
-      if (res.isSuccessful && body != null) {
-        _progressController?.add(body);
+  Future<void> refreshActiveRunProgress({
+    int maxAttempts = 1,
+    Duration retryDelay = const Duration(milliseconds: 400),
+  }) async {
+    // _session can still be null briefly right after start/restore because
+    // stream delivery is async; use active quest id as the real guard.
+    if (_activeQuestId == null) return;
+    for (var attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        final res = await ApiService.instance.client.apiQuestRunsActiveGet();
+        final body = res.body;
+        if (res.isSuccessful && body != null) {
+          _progressController?.add(body);
+          return;
+        }
+      } catch (_) {
+        // ignore and retry below
       }
-    } catch (_) {
-      // ignore: UI can continue with existing state
+      if (attempt < maxAttempts - 1) {
+        await Future.delayed(retryDelay);
+      }
     }
   }
 
@@ -248,6 +260,45 @@ class StreamQuest with WidgetsBindingObserver {
 
   void _emit(StreamingQuestSession next) {
     _controller.add(next);
+  }
+
+  Future<void> _restoreActiveRunOnInit() async {
+    try {
+      final res = await ApiService.instance.client.apiQuestRunsActiveGet();
+      final progress = res.body;
+      if (!res.isSuccessful || progress == null) {
+        return;
+      }
+
+      String questName = 'Квест';
+      try {
+        final questRes = await ApiService.instance.client.apiQuestsQuestIdGet(
+          questId: progress.questId,
+        );
+        final quest = questRes.body;
+        if (quest != null && quest.title.isNotEmpty) {
+          questName = quest.title;
+        }
+      } catch (_) {
+        // keep fallback name
+      }
+
+      _activeQuestId = progress.questId;
+      _activeQuestName = questName;
+      _startedAt = progress.startedAt;
+      _progressController?.add(progress);
+      _emit(
+        StreamingQuestSession(
+          questId: progress.questId,
+          name: questName,
+          startedAt: progress.startedAt,
+          steps: 0,
+        ),
+      );
+      _startElapsedTicker();
+    } catch (_) {
+      // no active run or request failure: leave service in empty state
+    }
   }
 
   /// Stops step tracking and clears the active session.

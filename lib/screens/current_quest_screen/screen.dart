@@ -26,6 +26,10 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
   void initState() {
     super.initState();
     _codeController = TextEditingController();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      StreamQuestScope.of(context).refreshActiveRunProgress(maxAttempts: 5);
+    });
   }
 
   @override
@@ -165,7 +169,6 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
     final session = questStream.activeSession;
     final point = questStream.activeRunProgress;
     final runResult = questStream.lastRunResult;
-
     if (runResult != null && _lastShownRunResultId != runResult.runId) {
       _lastShownRunResultId = runResult.runId;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -315,7 +318,7 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
                       _label(context, 'Задание'),
                       TextField(
                         readOnly: true,
-                        maxLines: 2,
+                        maxLines: 10,
                         decoration: _fieldDecoration(
                           context,
                           hint: point?.currentCheckpoint?.task ?? "Н/Д",
