@@ -69,7 +69,7 @@ class QuestCreationStepFivePage extends StatelessWidget {
         ),
         title: Text(
           'Проверка квеста',
-          style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+          style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
         ),
       ),
       body: SafeArea(
@@ -85,13 +85,10 @@ class QuestCreationStepFivePage extends StatelessWidget {
                       previewRow('Название', title),
                       previewRow('Район/город', location),
                       previewRow('Сложность', difficulty),
-                      previewRow('Длительность', durationMinutes),
+                      previewRow('Длительность, мин', durationMinutes),
                       previewRow('Описание', description),
                       previewRow('Правила', rulesAndWarnings),
-                      previewRow(
-                        'Чекпоинты',
-                        checkpointsCount.toString(),
-                      ),
+                      previewRow('Чекпоинты', checkpointsCount.toString()),
                     ],
                   ),
                 ),

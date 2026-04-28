@@ -201,7 +201,7 @@ class TeamQrPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(teamName),
+        title: Text(teamName, style: Theme.of(context).textTheme.titleMedium),
         backgroundColor: Colors.grey[200],
         foregroundColor: Colors.black87,
       ),

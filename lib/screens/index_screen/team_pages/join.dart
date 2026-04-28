@@ -213,7 +213,12 @@ class _TeamQrScannerPageState extends State<TeamQrScannerPage> {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        title: const Text('Сканирование QR'),
+        title: Text(
+          'Сканирование QR',
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(color: Colors.white),
+        ),
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
       ),

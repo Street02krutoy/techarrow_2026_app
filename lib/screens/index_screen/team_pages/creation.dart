@@ -84,7 +84,7 @@ class _TeamCreationPageState extends State<TeamCreationPage> {
           children: [
             Text(
               "Создание команды",
-              style: Theme.of(context).textTheme.titleLarge,
+              style: Theme.of(context).textTheme.titleMedium,
             ),
             SizedBox(height: 20),
 

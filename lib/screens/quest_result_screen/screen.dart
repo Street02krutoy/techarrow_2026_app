@@ -22,7 +22,10 @@ class QuestResultScreen extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Результат квеста'),
+        title: Text(
+          'Результат квеста',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         centerTitle: true,
       ),
       body: SafeArea(
@@ -42,12 +45,20 @@ class QuestResultScreen extends StatelessWidget {
                   children: [
                     Text(
                       result.questTitle,
-                      style: tt.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                      style: tt.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     const SizedBox(height: 10),
-                    Text('Очки: ${result.pointsAwarded}', style: tt.titleMedium),
+                    Text(
+                      'Очки: ${result.pointsAwarded}',
+                      style: tt.titleMedium,
+                    ),
                     const SizedBox(height: 6),
-                    Text('Длительность: ${_formatDuration()}', style: tt.bodyLarge),
+                    Text(
+                      'Длительность: ${_formatDuration()}',
+                      style: tt.bodyLarge,
+                    ),
                     const SizedBox(height: 6),
                     Text('Статус: ${result.status.name}', style: tt.bodyLarge),
                   ],
@@ -68,4 +79,3 @@ class QuestResultScreen extends StatelessWidget {
     );
   }
 }
-

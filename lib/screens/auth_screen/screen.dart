@@ -148,7 +148,7 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
       const SizedBox(height: 70),
       Text(
         'Регистрация',
-        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
           fontWeight: FontWeight.w600,
           color: Theme.of(context).colorScheme.onSurface,
         ),
@@ -240,7 +240,7 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
       const SizedBox(height: 22),
       Text(
         'Регистрация',
-        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
           fontWeight: FontWeight.w600,
           color: Theme.of(context).colorScheme.onSurface,
         ),
@@ -302,7 +302,7 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
       const Spacer(),
       Text(
         'Привет!',
-        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
           fontWeight: FontWeight.w600,
           color: Theme.of(context).colorScheme.onSurface,
         ),

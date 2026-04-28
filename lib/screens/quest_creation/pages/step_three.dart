@@ -15,6 +15,7 @@ class QuestCreationStepThreePage extends StatefulWidget {
     required this.pointRulesController,
     required this.selectedPoint,
     required this.onPointChanged,
+    required this.onSheetDismissed,
     required this.isEditing,
   });
 
@@ -27,6 +28,7 @@ class QuestCreationStepThreePage extends StatefulWidget {
   final TextEditingController pointRulesController;
   final LatLng? selectedPoint;
   final ValueChanged<LatLng> onPointChanged;
+  final VoidCallback onSheetDismissed;
   final bool isEditing;
 
   @override
@@ -37,6 +39,13 @@ class QuestCreationStepThreePage extends StatefulWidget {
 class _QuestCreationStepThreePageState
     extends State<QuestCreationStepThreePage> {
   static const LatLng _cityCenter = LatLng(56.3269, 44.0065);
+  static const double _sheetContentHeight = 600;
+  bool _didDismissSheet = false;
+
+  double _sheetMaxSize(double availableHeight) {
+    if (availableHeight <= 0) return 0.8;
+    return (_sheetContentHeight / availableHeight).clamp(0.28, 0.8);
+  }
 
   InputDecoration _fieldDecoration(BuildContext context, {String? hint}) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -104,6 +113,7 @@ class _QuestCreationStepThreePageState
                       point: widget.selectedPoint!,
                       width: 36,
                       height: 36,
+                      rotate: true,
                       child: Icon(
                         Icons.location_on,
                         size: 36,
@@ -115,101 +125,131 @@ class _QuestCreationStepThreePageState
             ],
           ),
 
-          DraggableScrollableSheet(
-            initialChildSize: 0.68,
-            minChildSize: 0.1,
-            maxChildSize: 0.8,
-            builder: (context, scrollController) {
-              return Container(
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerLow,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(20),
-                  ),
-                ),
-                child: SingleChildScrollView(
-                  primary: false,
-                  controller: scrollController,
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 42,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: colorScheme.outlineVariant,
-                          borderRadius: BorderRadius.circular(8),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final maxSheetSize = _sheetMaxSize(constraints.maxHeight);
+              final initialSheetSize = (widget.isEditing ? 0.68 : 0.22).clamp(
+                0.0,
+                maxSheetSize,
+              );
+
+              return NotificationListener<DraggableScrollableNotification>(
+                onNotification: (notification) {
+                  if (!_didDismissSheet && notification.extent <= 0.02) {
+                    _didDismissSheet = true;
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) {
+                        widget.onSheetDismissed();
+                      }
+                    });
+                  }
+                  return false;
+                },
+                child: DraggableScrollableSheet(
+                  initialChildSize: initialSheetSize,
+                  minChildSize: 0,
+                  maxChildSize: maxSheetSize,
+                  builder: (context, scrollController) {
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerLow,
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(20),
                         ),
                       ),
-                      const SizedBox(height: 10),
-                      _label(context, 'Название'),
-                      TextField(
-                        controller: widget.pointTitleController,
-                        decoration: _fieldDecoration(
-                          context,
-                          hint: 'Крутой квест',
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _label(context, 'Задание'),
-                      TextField(
-                        controller: widget.taskController,
-                        maxLines: 2,
-                        decoration: _fieldDecoration(
-                          context,
-                          hint: 'Добавьте задание для чекпоинта',
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _label(context, 'Код слово'),
-                      TextField(
-                        controller: widget.codeWordController,
-                        decoration: _fieldDecoration(context, hint: 'Патиссон'),
-                      ),
-                      const SizedBox(height: 12),
-                      _label(context, 'Подсказка'),
-                      TextField(
-                        controller: widget.hintController,
-                        decoration: _fieldDecoration(
-                          context,
-                          hint: 'Опционально',
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _label(context, 'Правила точки'),
-                      TextField(
-                        controller: widget.pointRulesController,
-                        decoration: _fieldDecoration(
-                          context,
-                          hint: 'Не заходить за ограждение',
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: colorScheme.secondaryContainer,
-                            foregroundColor: colorScheme.onSecondaryContainer,
-                            minimumSize: const Size.fromHeight(52),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(26),
+                      child: SingleChildScrollView(
+                        primary: false,
+                        controller: scrollController,
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 42,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: colorScheme.outlineVariant,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
-                          ),
-                          onPressed: hasSelectedPoint
-                              ? widget.onCheckpointSaved
-                              : null,
-                          child: Text(
-                            widget.isEditing ? 'Сохранить изменения' : 'Сохранить',
-                            style: textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: colorScheme.onSecondaryContainer,
+                            const SizedBox(height: 10),
+                            _label(context, 'Название'),
+                            TextField(
+                              controller: widget.pointTitleController,
+                              decoration: _fieldDecoration(
+                                context,
+                                hint: 'Введите название точки',
+                              ),
                             ),
-                          ),
+                            const SizedBox(height: 12),
+                            _label(context, 'Задание'),
+                            TextField(
+                              controller: widget.taskController,
+                              maxLines: 2,
+                              decoration: _fieldDecoration(
+                                context,
+                                hint: 'Введите задание для точки',
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            _label(context, 'Код слово'),
+                            TextField(
+                              controller: widget.codeWordController,
+                              decoration: _fieldDecoration(
+                                context,
+                                hint: 'Введите кодовое слово',
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            _label(context, 'Подсказка'),
+                            TextField(
+                              controller: widget.hintController,
+                              decoration: _fieldDecoration(
+                                context,
+                                hint: 'Введите подсказку (необязательно)',
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            _label(context, 'Правила точки'),
+                            TextField(
+                              controller: widget.pointRulesController,
+                              decoration: _fieldDecoration(
+                                context,
+                                hint: 'Введите правила для точки',
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            SizedBox(
+                              width: double.infinity,
+                              child: FilledButton(
+                                style: FilledButton.styleFrom(
+                                  backgroundColor:
+                                      colorScheme.secondaryContainer,
+                                  foregroundColor:
+                                      colorScheme.onSecondaryContainer,
+                                  minimumSize: const Size.fromHeight(52),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(26),
+                                  ),
+                                ),
+                                onPressed: hasSelectedPoint
+                                    ? widget.onCheckpointSaved
+                                    : null,
+                                child: Text(
+                                  widget.isEditing
+                                      ? 'Сохранить изменения'
+                                      : 'Сохранить',
+                                  style: textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: colorScheme.onSecondaryContainer,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
               );
             },
@@ -220,8 +260,7 @@ class _QuestCreationStepThreePageState
                 Row(
                   children: [
                     IconButton(
-                      onPressed: () =>
-                          widget.changePage(QuestCreationPageStatus.stepFour),
+                      onPressed: widget.onSheetDismissed,
                       icon: Icon(
                         Icons.arrow_back,
                         color: colorScheme.onSurface,

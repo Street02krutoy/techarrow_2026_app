@@ -10,14 +10,22 @@ class QuestCreationStepFourPage extends StatelessWidget {
     required this.checkpointsCount,
     required this.checkpoints,
     required this.onCheckpointTap,
+    required this.onMapTap,
   });
 
   final void Function(QuestCreationPageStatus status) changePage;
   final int checkpointsCount;
   final List<QuestDraftCheckpoint> checkpoints;
   final ValueChanged<int> onCheckpointTap;
+  final ValueChanged<LatLng> onMapTap;
 
   static const LatLng _cityCenter = LatLng(56.3269, 44.0065);
+  static const double _sheetContentHeight = 174;
+
+  double _sheetMaxSize(double availableHeight) {
+    if (availableHeight <= 0) return 0.35;
+    return (_sheetContentHeight / availableHeight).clamp(0.17, 0.35);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,9 +37,10 @@ class QuestCreationStepFourPage extends StatelessWidget {
       body: Stack(
         children: [
           FlutterMap(
-            options: const MapOptions(
+            options: MapOptions(
               initialCenter: _cityCenter,
               initialZoom: 12.5,
+              onTap: (_, point) => onMapTap(point),
             ),
             children: [
               TileLayer(
@@ -45,6 +54,7 @@ class QuestCreationStepFourPage extends StatelessWidget {
                     point: LatLng(point.latitude, point.longitude),
                     width: 44,
                     height: 44,
+                    rotate: true,
                     child: GestureDetector(
                       onTap: () => onCheckpointTap(index),
                       child: Icon(
@@ -94,11 +104,7 @@ class QuestCreationStepFourPage extends StatelessWidget {
                           ),
                         ),
                       ),
-                      IconButton(
-                        onPressed: () =>
-                            changePage(QuestCreationPageStatus.stepThree),
-                        icon: Icon(Icons.add, color: colorScheme.onSurface),
-                      ),
+                      const SizedBox(width: 48),
                     ],
                   ),
                 ),
@@ -106,81 +112,89 @@ class QuestCreationStepFourPage extends StatelessWidget {
               Spacer(),
             ],
           ),
-          DraggableScrollableSheet(
-            initialChildSize: 0.2,
-            minChildSize: 0.17,
-            maxChildSize: 0.35,
-            builder: (context, scrollController) {
-              return Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerLow,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(16),
-                  ),
-                ),
-                child: SingleChildScrollView(
-                  controller: scrollController,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: 42,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: colorScheme.outlineVariant,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final maxSheetSize = _sheetMaxSize(constraints.maxHeight);
+              final initialSheetSize = 0.2.clamp(0.17, maxSheetSize);
+
+              return DraggableScrollableSheet(
+                initialChildSize: initialSheetSize,
+                minChildSize: 0.17,
+                maxChildSize: maxSheetSize,
+                builder: (context, scrollController) {
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerLow,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(16),
                       ),
-                      const SizedBox(height: 10),
-                      Text(
-                        'Добавлено $checkpointsCount чекпоинта',
-                        style: textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: colorScheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'минимум 3 чекпоинта',
-                        style: textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: isReady
-                                ? colorScheme.secondaryContainer
-                                : colorScheme.surfaceContainerHighest,
-                            foregroundColor: isReady
-                                ? colorScheme.onSecondaryContainer
-                                : colorScheme.onSurfaceVariant,
-                            minimumSize: const Size.fromHeight(46),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: SingleChildScrollView(
+                      controller: scrollController,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Center(
+                            child: Container(
+                              width: 42,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: colorScheme.outlineVariant,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
                           ),
-                          onPressed: isReady
-                              ? () =>
-                                    changePage(QuestCreationPageStatus.stepFive)
-                              : null,
-                          child: Text(
-                            'Продолжить',
-                            style: textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
+                          const SizedBox(height: 10),
+                          Text(
+                            'Добавлено $checkpointsCount чекпоинта',
+                            style: textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: colorScheme.onSurface,
                             ),
                           ),
-                        ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'минимум 3 чекпоинта',
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: isReady
+                                    ? colorScheme.secondaryContainer
+                                    : colorScheme.surfaceContainerHighest,
+                                foregroundColor: isReady
+                                    ? colorScheme.onSecondaryContainer
+                                    : colorScheme.onSurfaceVariant,
+                                minimumSize: const Size.fromHeight(46),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(24),
+                                ),
+                              ),
+                              onPressed: isReady
+                                  ? () => changePage(
+                                      QuestCreationPageStatus.stepFive,
+                                    )
+                                  : null,
+                              child: Text(
+                                'Продолжить',
+                                style: textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                },
               );
             },
           ),

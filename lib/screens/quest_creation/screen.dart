@@ -95,6 +95,34 @@ class _QuestCreationScreenState extends State<QuestCreationScreen> {
     });
   }
 
+  void _startCheckpointAt(LatLng point) {
+    _pointTitleController.clear();
+    _pointTaskController.clear();
+    _pointCodeWordController.clear();
+    _pointHintController.clear();
+    _pointRulesController.clear();
+    _selectedPoint = point;
+    _editingCheckpointIndex = null;
+
+    setState(() {
+      status = QuestCreationPageStatus.stepThree;
+    });
+  }
+
+  void _dismissCheckpointForm() {
+    _pointTitleController.clear();
+    _pointTaskController.clear();
+    _pointCodeWordController.clear();
+    _pointHintController.clear();
+    _pointRulesController.clear();
+    _selectedPoint = null;
+    _editingCheckpointIndex = null;
+
+    setState(() {
+      status = QuestCreationPageStatus.stepFour;
+    });
+  }
+
   Future<void> _pickCoverImage() async {
     final picked = await _imagePicker.pickImage(source: ImageSource.gallery);
     if (picked == null) return;
@@ -208,9 +236,11 @@ class _QuestCreationScreenState extends State<QuestCreationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    late final Widget currentPage;
     switch (status) {
       case QuestCreationPageStatus.stepOne:
-        return QuestCreationStepOnePage(
+        currentPage = QuestCreationStepOnePage(
+          key: ValueKey(status),
           changePage: changePage,
           titleController: _titleController,
           locationController: _locationController,
@@ -218,7 +248,8 @@ class _QuestCreationScreenState extends State<QuestCreationScreen> {
           durationController: _durationController,
         );
       case QuestCreationPageStatus.stepTwo:
-        return QuestCreationStepTwoPage(
+        currentPage = QuestCreationStepTwoPage(
+          key: ValueKey(status),
           changePage: changePage,
           descriptionController: _descriptionController,
           rulesController: _rulesController,
@@ -227,7 +258,8 @@ class _QuestCreationScreenState extends State<QuestCreationScreen> {
           onRemoveCoverImage: _removeCoverImage,
         );
       case QuestCreationPageStatus.stepThree:
-        return QuestCreationStepThreePage(
+        currentPage = QuestCreationStepThreePage(
+          key: ValueKey(status),
           changePage: changePage,
           onCheckpointSaved: onCheckpointSaved,
           pointTitleController: _pointTitleController,
@@ -241,17 +273,21 @@ class _QuestCreationScreenState extends State<QuestCreationScreen> {
               _selectedPoint = point;
             });
           },
+          onSheetDismissed: _dismissCheckpointForm,
           isEditing: _editingCheckpointIndex != null,
         );
       case QuestCreationPageStatus.stepFour:
-        return QuestCreationStepFourPage(
+        currentPage = QuestCreationStepFourPage(
+          key: ValueKey(status),
           changePage: changePage,
           checkpointsCount: checkpointsCount,
           checkpoints: _checkpoints,
           onCheckpointTap: _editCheckpoint,
+          onMapTap: _startCheckpointAt,
         );
       case QuestCreationPageStatus.stepFive:
-        return QuestCreationStepFivePage(
+        currentPage = QuestCreationStepFivePage(
+          key: ValueKey(status),
           changePage: changePage,
           title: _titleController.text.trim(),
           location: _locationController.text.trim(),
@@ -264,6 +300,25 @@ class _QuestCreationScreenState extends State<QuestCreationScreen> {
           onSubmit: _submitQuest,
         );
     }
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 220),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) {
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 0.02),
+              end: Offset.zero,
+            ).animate(animation),
+            child: child,
+          ),
+        );
+      },
+      child: currentPage,
+    );
   }
 }
 

@@ -289,7 +289,7 @@ class _QuestDataScreenState extends State<QuestDataScreen> {
         ),
         title: Text(
           _quest.name,
-          style: tt.titleLarge?.copyWith(
+          style: tt.titleMedium?.copyWith(
             color: cs.onSurface,
             fontWeight: FontWeight.w600,
           ),

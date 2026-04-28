@@ -17,6 +17,7 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends State<MainPage> {
   final TextEditingController _searchController = TextEditingController();
   bool _isScrolled = false;
+  bool _hasSearchText = false;
 
   final ScrollController _scrollController = ScrollController();
 
@@ -36,6 +37,7 @@ class _MainPageState extends State<MainPage> {
   void initState() {
     super.initState();
     _refreshQuests();
+    _searchController.addListener(_onSearchChanged);
     _scrollController.addListener(() {
       final scrolled = _scrollController.offset > 0;
       if (scrolled != _isScrolled) {
@@ -124,6 +126,7 @@ class _MainPageState extends State<MainPage> {
 
   @override
   void dispose() {
+    _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -132,6 +135,14 @@ class _MainPageState extends State<MainPage> {
   void _onSearchClose() {
     setState(() {
       _searchController.clear();
+    });
+  }
+
+  void _onSearchChanged() {
+    final hasText = _searchController.text.isNotEmpty;
+    if (hasText == _hasSearchText) return;
+    setState(() {
+      _hasSearchText = hasText;
     });
   }
 
@@ -286,15 +297,18 @@ class _MainPageState extends State<MainPage> {
         controller: _searchController,
         hintText: "Поиск квестов",
         shadowColor: WidgetStatePropertyAll(Colors.transparent),
-        leading: Icon(Icons.search, color: Colors.grey[700]),
+        leading: IconButton(
+          icon: const Icon(Icons.tune),
+          color: Colors.grey[700],
+          onPressed: _openFiltersSheet,
+        ),
         trailing: [
           IconButton(
-            icon: const Icon(Icons.tune),
-            onPressed: _openFiltersSheet,
-          ),
-          IconButton(
-            icon: Icon(Icons.close, color: Colors.grey[700]),
-            onPressed: _onSearchClose,
+            icon: Icon(
+              _hasSearchText ? Icons.close : Icons.search,
+              color: Colors.grey[700],
+            ),
+            onPressed: _hasSearchText ? _onSearchClose : null,
           ),
         ],
       ),
@@ -408,21 +422,51 @@ class _MainPageState extends State<MainPage> {
   }
 }
 
-class _MainFiltersSheet extends StatelessWidget {
+class _MainFiltersSheet extends StatefulWidget {
   const _MainFiltersSheet();
+
+  @override
+  State<_MainFiltersSheet> createState() => _MainFiltersSheetState();
+}
+
+class _MainFiltersSheetState extends State<_MainFiltersSheet> {
+  final TextEditingController _cityController = TextEditingController();
+  final TextEditingController _minDurationController = TextEditingController();
+  final TextEditingController _maxDurationController = TextEditingController();
+  int? _difficulty;
+
+  @override
+  void dispose() {
+    _cityController.dispose();
+    _minDurationController.dispose();
+    _maxDurationController.dispose();
+    super.dispose();
+  }
+
+  String _difficultyLabel(int value) {
+    return switch (value) {
+      1 => 'Очень легко',
+      2 => 'Легко',
+      3 => 'Средне',
+      4 => 'Сложно',
+      5 => 'Очень сложно',
+      _ => '',
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    InputDecoration fieldDecoration({bool withArrow = false}) {
+    InputDecoration fieldDecoration({String? hint}) {
       return InputDecoration(
+        hintText: hint,
         filled: true,
         fillColor: colorScheme.surfaceContainer,
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 18,
-          vertical: 18,
+          horizontal: 16,
+          vertical: 16,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
@@ -436,140 +480,206 @@ class _MainFiltersSheet extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide(color: colorScheme.primary),
         ),
-        suffixIcon: withArrow
-            ? Icon(Icons.keyboard_arrow_down, color: colorScheme.onSurface)
-            : null,
       );
     }
-
-    final difficultyController = TextEditingController();
-    final cityController = TextEditingController();
-    final minDurationController = TextEditingController();
-    final maxDurationController = TextEditingController();
 
     Widget field({
       required String label,
       required TextEditingController controller,
+      String? hint,
       TextInputType? keyboardType,
-      bool withArrow = false,
     }) {
-      return TextField(
-        controller: controller,
-        keyboardType: keyboardType,
-        decoration: fieldDecoration(withArrow: withArrow).copyWith(
-          labelText: label,
-          floatingLabelBehavior: FloatingLabelBehavior.always,
-        ),
-        style: textTheme.titleMedium?.copyWith(color: colorScheme.onSurface),
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: textTheme.labelLarge?.copyWith(
+              color: colorScheme.onSurface,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: controller,
+            keyboardType: keyboardType,
+            decoration: fieldDecoration(hint: hint),
+            style: textTheme.bodyLarge?.copyWith(color: colorScheme.onSurface),
+          ),
+        ],
       );
     }
 
     return SafeArea(
       top: false,
-      child: SizedBox(
-        height: MediaQuery.of(context).size.height * 0.9,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-          child: Column(
-            children: [
-              Container(
-                width: 42,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: colorScheme.outline,
-                  borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * 0.86,
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 42,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: colorScheme.outline,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(Icons.close, color: colorScheme.onSurface),
+                const SizedBox(height: 16),
+                Text(
+                  'Фильтры',
+                  textAlign: TextAlign.center,
+                  style: textTheme.titleMedium?.copyWith(
+                    color: colorScheme.onSurface,
+                    fontWeight: FontWeight.w600,
                   ),
-                  Expanded(
-                    child: Text(
-                      'Фильтры',
-                      textAlign: TextAlign.center,
-                      style: textTheme.titleLarge?.copyWith(
-                        color: colorScheme.onSurface,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () {},
-                    child: Text(
-                      'Сбросить',
-                      style: textTheme.titleMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              field(
-                label: 'Сложность',
-                controller: difficultyController,
-                keyboardType: TextInputType.number,
-                withArrow: true,
-              ),
-              const SizedBox(height: 14),
-              field(label: 'Город', controller: cityController),
-              const SizedBox(height: 14),
-              field(
-                label: 'Мин. длительность (мин)',
-                controller: minDurationController,
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 14),
-              field(
-                label: 'Макс. длительность (мин)',
-                controller: maxDurationController,
-                keyboardType: TextInputType.number,
-              ),
-              const Spacer(),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: colorScheme.secondaryContainer,
-                    foregroundColor: colorScheme.onSecondaryContainer,
-                    minimumSize: const Size.fromHeight(64),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(40),
-                    ),
-                  ),
-                  onPressed: () {
-                    final difficulty = int.tryParse(difficultyController.text);
-                    final minDuration = int.tryParse(
-                      minDurationController.text,
-                    );
-                    final maxDuration = int.tryParse(
-                      maxDurationController.text,
-                    );
-                    final city = cityController.text.trim();
-
-                    Navigator.of(context).pop(
-                      _QuestFilters(
-                        difficulties: difficulty != null ? [difficulty] : null,
-                        city: city.isEmpty ? null : city,
-                        minDurationMinutes: minDuration,
-                        maxDurationMinutes: maxDuration,
-                      ),
-                    );
-                  },
+                ),
+                const SizedBox(height: 18),
+                Align(
+                  alignment: Alignment.centerLeft,
                   child: Text(
-                    'Применить',
-                    style: textTheme.titleMedium?.copyWith(
-                      color: colorScheme.onSecondaryContainer,
-                      fontWeight: FontWeight.w700,
+                    'Сложность',
+                    style: textTheme.labelLarge?.copyWith(
+                      color: colorScheme.onSurface,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                DropdownButtonFormField<int>(
+                  key: ValueKey(_difficulty),
+                  initialValue: _difficulty,
+                  decoration: fieldDecoration(hint: 'Выберите сложность'),
+                  dropdownColor: colorScheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  icon: Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: colorScheme.primary,
+                  ),
+                  items: List.generate(5, (index) {
+                    final value = index + 1;
+                    return DropdownMenuItem<int>(
+                      value: value,
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 30,
+                            height: 30,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: colorScheme.primaryContainer,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              value.toString(),
+                              style: textTheme.labelLarge?.copyWith(
+                                color: colorScheme.onPrimaryContainer,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(_difficultyLabel(value)),
+                        ],
+                      ),
+                    );
+                  }),
+                  onChanged: (value) => setState(() => _difficulty = value),
+                ),
+                const SizedBox(height: 14),
+                field(
+                  label: 'Город',
+                  controller: _cityController,
+                  hint: 'Введите город',
+                ),
+                const SizedBox(height: 14),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Длительность, мин',
+                    style: textTheme.labelLarge?.copyWith(
+                      color: colorScheme.onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _minDurationController,
+                        keyboardType: TextInputType.number,
+                        decoration: fieldDecoration(hint: 'От'),
+                        style: textTheme.bodyLarge?.copyWith(
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextField(
+                        controller: _maxDurationController,
+                        keyboardType: TextInputType.number,
+                        decoration: fieldDecoration(hint: 'До'),
+                        style: textTheme.bodyLarge?.copyWith(
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: colorScheme.secondaryContainer,
+                      foregroundColor: colorScheme.onSecondaryContainer,
+                      minimumSize: const Size.fromHeight(64),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(40),
+                      ),
+                    ),
+                    onPressed: () {
+                      final minDuration = int.tryParse(
+                        _minDurationController.text,
+                      );
+                      final maxDuration = int.tryParse(
+                        _maxDurationController.text,
+                      );
+                      final city = _cityController.text.trim();
+
+                      Navigator.of(context).pop(
+                        _QuestFilters(
+                          difficulties: _difficulty != null
+                              ? [_difficulty]
+                              : null,
+                          city: city.isEmpty ? null : city,
+                          minDurationMinutes: minDuration,
+                          maxDurationMinutes: maxDuration,
+                        ),
+                      );
+                    },
+                    child: Text(
+                      'Применить',
+                      style: textTheme.titleMedium?.copyWith(
+                        color: colorScheme.onSecondaryContainer,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
