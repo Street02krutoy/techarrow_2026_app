@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:techarrow_2026_app/gen/swagger.swagger.dart';
 import 'package:techarrow_2026_app/models/quest.dart';
+import 'package:techarrow_2026_app/screens/current_quest_screen/screen.dart';
+import 'package:techarrow_2026_app/screens/quest_data/team_waiting_room_sheet.dart';
 import 'package:techarrow_2026_app/services/api.dart';
 import 'package:techarrow_2026_app/services/quest.dart';
 
@@ -174,9 +177,38 @@ class _QuestDataScreenState extends State<QuestDataScreen> {
                   const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: () async {
+                      await ApiService.instance.client.apiQuestRunsPost(
+                        body: QuestRunStartRequest(questId: widget.quest.id),
+                      );
+                      if (!context.mounted) return;
+                      final navigator = Navigator.of(context);
+                      final surface = Theme.of(context).colorScheme.surface;
                       await StreamQuestScope.of(context).startSession(_quest);
-                      if (context.mounted) {
-                        Navigator.of(context).pop();
+                      if (!context.mounted) return;
+                      navigator.pop(); // close bottom sheet
+                      if (soloMode) {
+                        navigator.push(
+                          MaterialPageRoute(
+                            builder: (_) => const CurrentQuestScreen(),
+                          ),
+                        );
+                        return;
+                      } else {
+                        if (!context.mounted) return;
+                        await showModalBottomSheet<void>(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: surface,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(24),
+                            ),
+                          ),
+                          builder: (_) => TeamWaitingRoomSheet(
+                            questId: _quest.id,
+                            questTitle: _quest.name,
+                          ),
+                        );
                       }
                     },
                     style: ButtonStyle(

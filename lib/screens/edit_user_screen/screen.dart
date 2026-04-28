@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:board_datetime_picker/board_datetime_picker.dart';
+import 'package:techarrow_2026_app/gen/swagger.swagger.dart';
+import 'package:techarrow_2026_app/services/api.dart';
+import 'package:techarrow_2026_app/services/auth.dart';
 
 /// Profile edit: nickname, date of birth, email, password — layout per design mock.
 class EditUserScreen extends StatefulWidget {
@@ -12,14 +16,30 @@ class _EditUserScreenState extends State<EditUserScreen> {
   static const Color _fieldFill = Color(0xFFEBF0F5);
   static const Color _saveButtonFill = Color(0xFFD9E6F2);
 
-  final _nicknameCtrl = TextEditingController(text: 'patisson');
-  final _dobCtrl = TextEditingController();
-  bool _obscurePassword = true;
+  late final TextEditingController _nicknameCtrl;
+  DateTime? _birthdate;
+  bool _isSaving = false;
+  bool _didInitFromAuth = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nicknameCtrl = TextEditingController();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_didInitFromAuth) return;
+    final me = StreamAuthScope.of(context).currentUser;
+    _nicknameCtrl.text = me?.username ?? '';
+    _birthdate = me?.birthdate;
+    _didInitFromAuth = true;
+  }
 
   @override
   void dispose() {
     _nicknameCtrl.dispose();
-    _dobCtrl.dispose();
     super.dispose();
   }
 
@@ -42,6 +62,120 @@ class _EditUserScreenState extends State<EditUserScreen> {
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       suffixIcon: suffixIcon,
     );
+  }
+
+  Widget _buildDateField(
+    BuildContext context, {
+    required String label,
+    required String hint,
+    required DateTime? selectedDate,
+    required void Function(DateTime) onDateSelected,
+  }) {
+    final textTheme = Theme.of(context).textTheme;
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          label,
+          style: textTheme.bodyMedium?.copyWith(
+            color: onSurface,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () async {
+            final result = await showBoardDateTimeMultiPicker(
+              context: context,
+              pickerType: DateTimePickerType.date,
+              startDate: selectedDate,
+              minimumDate: DateTime(1900),
+              maximumDate: DateTime.now(),
+            );
+            if (result != null) {
+              onDateSelected(result.start);
+            }
+          },
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            decoration: BoxDecoration(
+              color: _fieldFill,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    selectedDate != null
+                        ? "${selectedDate.day.toString().padLeft(2, '0')}.${selectedDate.month.toString().padLeft(2, '0')}.${selectedDate.year}"
+                        : hint,
+                    style: textTheme.bodyLarge?.copyWith(
+                      color: selectedDate != null
+                          ? onSurface
+                          : onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                Icon(Icons.calendar_today, color: onSurfaceVariant),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _save() async {
+    if (_isSaving) return;
+    final username = _nicknameCtrl.text.trim();
+    if (username.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Введите никнейм')));
+      return;
+    }
+    if (_birthdate == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Выберите дату рождения')));
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      final res = await ApiService.instance.client.apiAuthMePatch(
+        body: UserUpdate(username: username, birthdate: _birthdate),
+      );
+      if (!mounted) return;
+      if (res.isSuccessful) {
+        await StreamAuthScope.of(context).refreshMe();
+        if (!mounted) return;
+        Navigator.of(context).maybePop();
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Не удалось сохранить')));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Не удалось сохранить')));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
   }
 
   @override
@@ -84,16 +218,12 @@ class _EditUserScreenState extends State<EditUserScreen> {
                 onSurface: onSurface,
               ),
               const SizedBox(height: 20),
-              _labeledBlock(
+              _buildDateField(
+                context,
                 label: 'Дата рождения',
-                child: TextField(
-                  controller: _dobCtrl,
-                  keyboardType: TextInputType.datetime,
-                  style: textTheme.bodyLarge?.copyWith(color: onSurface),
-                  decoration: _fieldDecoration(context, hintText: 'ДД.ММ.ГГГГ'),
-                ),
-                textTheme: textTheme,
-                onSurface: onSurface,
+                hint: 'ДД.ММ.ГГГГ',
+                selectedDate: _birthdate,
+                onDateSelected: (d) => setState(() => _birthdate = d),
               ),
 
               const SizedBox(height: 32),
@@ -109,9 +239,9 @@ class _EditUserScreenState extends State<EditUserScreen> {
                     ),
                     elevation: 0,
                   ),
-                  onPressed: () => Navigator.of(context).maybePop(),
+                  onPressed: _isSaving ? null : _save,
                   child: Text(
-                    'Сохранить',
+                    _isSaving ? 'Сохранение...' : 'Сохранить',
                     style: textTheme.titleMedium?.copyWith(
                       color: onSurface,
                       fontWeight: FontWeight.w500,

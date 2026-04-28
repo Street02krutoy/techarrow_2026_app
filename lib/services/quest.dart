@@ -8,6 +8,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:pedometer/pedometer.dart';
 import 'package:techarrow_2026_app/models/quest.dart';
 import 'package:techarrow_2026_app/models/streaming_quest_session.dart';
+import 'package:techarrow_2026_app/services/api.dart';
 
 /// Provides [StreamQuest] to the widget tree (same pattern as [StreamAuthScope]).
 class StreamQuestScope extends InheritedNotifier<StreamQuestNotifier> {
@@ -56,6 +57,8 @@ class StreamQuest with WidgetsBindingObserver {
 
   StreamSubscription<StepCount>? _stepSubscription;
   Timer? _elapsedTicker;
+  Timer? _backendPoller;
+  bool _isBackendPollInFlight = false;
   int? _baselineTotalSteps;
   DateTime? _startedAt;
   int? _activeQuestId;
@@ -123,6 +126,7 @@ class StreamQuest with WidgetsBindingObserver {
     );
 
     _startElapsedTicker();
+    _startBackendPolling();
 
     return true;
   }
@@ -133,6 +137,22 @@ class StreamQuest with WidgetsBindingObserver {
       final s = _session;
       if (s == null) return;
       _emit(s.copyWith());
+    });
+  }
+
+  void _startBackendPolling() {
+    _backendPoller?.cancel();
+    _backendPoller = Timer.periodic(const Duration(seconds: 1), (_) async {
+      if (_isBackendPollInFlight) return;
+      if (_session == null) return;
+      _isBackendPollInFlight = true;
+      try {
+        await ApiService.instance.client.apiQuestRunsActiveGet();
+      } catch (_) {
+        // best-effort polling; ignore transient failures
+      } finally {
+        _isBackendPollInFlight = false;
+      }
     });
   }
 
@@ -204,6 +224,9 @@ class StreamQuest with WidgetsBindingObserver {
     _cancelStepSubscriptionSilently();
     _elapsedTicker?.cancel();
     _elapsedTicker = null;
+    _backendPoller?.cancel();
+    _backendPoller = null;
+    _isBackendPollInFlight = false;
     _baselineTotalSteps = null;
     _startedAt = null;
     _activeQuestId = null;

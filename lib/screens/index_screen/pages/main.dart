@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:techarrow_2026_app/gen/swagger.swagger.dart';
 import 'package:techarrow_2026_app/models/quest.dart';
+import 'package:techarrow_2026_app/screens/current_quest_screen/screen.dart';
 import 'package:techarrow_2026_app/screens/quest_creation/screen.dart';
 import 'package:techarrow_2026_app/services/api.dart';
 import 'package:techarrow_2026_app/services/quest.dart';
@@ -317,43 +318,53 @@ class _MainPageState extends State<MainPage> {
   Widget buildHeaderCard(BuildContext context) {
     final quest = StreamQuestScope.of(context).activeSession!;
 
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 12),
-
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(offset: Offset(0, 4), blurRadius: 2, color: Colors.grey),
-        ],
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            bottom: 0,
-            right: 0,
-            child: ClipRRect(
-              borderRadius: BorderRadiusGeometry.only(
-                bottomRight: Radius.circular(16),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const CurrentQuestScreen()),
+        );
+      },
+      child: Container(
+        margin: EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(offset: Offset(0, 4), blurRadius: 2, color: Colors.grey),
+          ],
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              bottom: 0,
+              right: 0,
+              child: ClipRRect(
+                borderRadius: BorderRadiusGeometry.only(
+                  bottomRight: Radius.circular(16),
+                ),
+                child: Image.asset("assets/abstract.png"),
               ),
-              child: Image.asset("assets/abstract.png"),
             ),
-          ),
-          Padding(
-            padding: EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(quest.name, style: TextStyle(fontSize: 18)),
-                SizedBox(height: 8),
-                _buildSegmentedProgressBar(totalSegments: 4, currentSegment: 1),
-                SizedBox(height: 8),
-                Text("Количество шагов: ${quest.steps}"),
-                Text("Пройденное время: ${formatDurationHms(quest.elapsed)}"),
-              ],
+            Padding(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(quest.name, style: TextStyle(fontSize: 18)),
+                  SizedBox(height: 8),
+                  _buildSegmentedProgressBar(
+                    totalSegments: 4,
+                    currentSegment: 1,
+                  ),
+                  SizedBox(height: 8),
+                  Text("Количество шагов: ${quest.steps}"),
+                  Text("Пройденное время: ${formatDurationHms(quest.elapsed)}"),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

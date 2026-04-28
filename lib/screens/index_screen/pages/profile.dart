@@ -22,18 +22,7 @@ class _ProfilePageState extends State<ProfilePage> {
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
           child: Column(
             children: [
-              Align(
-                alignment: Alignment.centerRight,
-                child: IconButton(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const EditUserScreen()),
-                    );
-                  },
-                  icon: const Icon(Icons.edit, size: 28),
-                ),
-              ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               CircleAvatar(
                 radius: 58,
 
@@ -61,6 +50,70 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 child: Column(
                   children: [
+                    InkWell(
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const _AchievementsScreen(),
+                          ),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(10),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.emoji_events_rounded,
+                            color: colorScheme.onSurface,
+                          ),
+                          const SizedBox(width: 16),
+                          Text(
+                            'Достижения',
+                            style: textTheme.titleMedium?.copyWith(
+                              color: colorScheme.onSurface,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Divider(
+                      color: colorScheme.outlineVariant,
+                      thickness: 1,
+                      height: 1,
+                    ),
+                    const SizedBox(height: 16),
+                    InkWell(
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const EditUserScreen(),
+                          ),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(10),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.edit_rounded,
+                            color: colorScheme.onSurface,
+                          ),
+                          const SizedBox(width: 16),
+                          Text(
+                            'Редактировать профиль',
+                            style: textTheme.titleMedium?.copyWith(
+                              color: colorScheme.onSurface,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Divider(
+                      color: colorScheme.outlineVariant,
+                      thickness: 1,
+                      height: 1,
+                    ),
+                    const SizedBox(height: 16),
                     InkWell(
                       onTap: () {
                         Navigator.of(context).push(
@@ -119,6 +172,18 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _AchievementsScreen extends StatelessWidget {
+  const _AchievementsScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Достижения')),
+      body: const Center(child: Text('Скоро')),
     );
   }
 }

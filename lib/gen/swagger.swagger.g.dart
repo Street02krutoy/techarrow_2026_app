@@ -473,6 +473,131 @@ Map<String, dynamic> _$TeamMemberResponseToJson(TeamMemberResponse instance) =>
       'age': instance.age,
     };
 
+TeamQuestRunCheckpointAnswerRequest
+_$TeamQuestRunCheckpointAnswerRequestFromJson(Map<String, dynamic> json) =>
+    TeamQuestRunCheckpointAnswerRequest(answer: json['answer'] as String);
+
+Map<String, dynamic> _$TeamQuestRunCheckpointAnswerRequestToJson(
+  TeamQuestRunCheckpointAnswerRequest instance,
+) => <String, dynamic>{'answer': instance.answer};
+
+TeamQuestRunCheckpointAnswerResponse
+_$TeamQuestRunCheckpointAnswerResponseFromJson(Map<String, dynamic> json) =>
+    TeamQuestRunCheckpointAnswerResponse(
+      correct: json['correct'] as bool,
+      progress: TeamQuestRunProgressResponse.fromJson(
+        json['progress'] as Map<String, dynamic>,
+      ),
+      pointsEarned: (json['points_earned'] as num?)?.toInt(),
+    );
+
+Map<String, dynamic> _$TeamQuestRunCheckpointAnswerResponseToJson(
+  TeamQuestRunCheckpointAnswerResponse instance,
+) => <String, dynamic>{
+  'correct': instance.correct,
+  'progress': instance.progress.toJson(),
+  'points_earned': instance.pointsEarned,
+};
+
+TeamQuestRunCheckpointView _$TeamQuestRunCheckpointViewFromJson(
+  Map<String, dynamic> json,
+) => TeamQuestRunCheckpointView(
+  id: (json['id'] as num).toInt(),
+  title: json['title'] as String,
+  latitude: (json['latitude'] as num).toDouble(),
+  longitude: (json['longitude'] as num).toDouble(),
+  task: json['task'] as String,
+  hint: json['hint'] as String?,
+  pointRules: json['point_rules'] as String?,
+  isCompleted: json['is_completed'] as bool,
+  completedByUserId: (json['completed_by_user_id'] as num?)?.toInt(),
+  completedAt: json['completed_at'] == null
+      ? null
+      : DateTime.parse(json['completed_at'] as String),
+);
+
+Map<String, dynamic> _$TeamQuestRunCheckpointViewToJson(
+  TeamQuestRunCheckpointView instance,
+) => <String, dynamic>{
+  'id': instance.id,
+  'title': instance.title,
+  'latitude': instance.latitude,
+  'longitude': instance.longitude,
+  'task': instance.task,
+  'hint': instance.hint,
+  'point_rules': instance.pointRules,
+  'is_completed': instance.isCompleted,
+  'completed_by_user_id': instance.completedByUserId,
+  'completed_at': instance.completedAt?.toIso8601String(),
+};
+
+TeamQuestRunProgressResponse _$TeamQuestRunProgressResponseFromJson(
+  Map<String, dynamic> json,
+) => TeamQuestRunProgressResponse(
+  runId: (json['run_id'] as num).toInt(),
+  teamId: (json['team_id'] as num).toInt(),
+  questId: (json['quest_id'] as num).toInt(),
+  status: teamQuestRunStatusSchemaFromJson(json['status']),
+  readyMemberIds:
+      (json['ready_member_ids'] as List<dynamic>?)
+          ?.map((e) => (e as num).toInt())
+          .toList() ??
+      [],
+  totalMembers: (json['total_members'] as num).toInt(),
+  startsAt: json['starts_at'] == null
+      ? null
+      : DateTime.parse(json['starts_at'] as String),
+  startedAt: json['started_at'] == null
+      ? null
+      : DateTime.parse(json['started_at'] as String),
+  completedAt: json['completed_at'] == null
+      ? null
+      : DateTime.parse(json['completed_at'] as String),
+  totalCheckpoints: (json['total_checkpoints'] as num).toInt(),
+  completedCheckpoints: (json['completed_checkpoints'] as num).toInt(),
+  checkpoints:
+      (json['checkpoints'] as List<dynamic>?)
+          ?.map(
+            (e) =>
+                TeamQuestRunCheckpointView.fromJson(e as Map<String, dynamic>),
+          )
+          .toList() ??
+      [],
+  pointsAwarded: (json['points_awarded'] as num?)?.toInt(),
+);
+
+Map<String, dynamic> _$TeamQuestRunProgressResponseToJson(
+  TeamQuestRunProgressResponse instance,
+) => <String, dynamic>{
+  'run_id': instance.runId,
+  'team_id': instance.teamId,
+  'quest_id': instance.questId,
+  'status': teamQuestRunStatusSchemaToJson(instance.status),
+  'ready_member_ids': instance.readyMemberIds,
+  'total_members': instance.totalMembers,
+  'starts_at': instance.startsAt?.toIso8601String(),
+  'started_at': instance.startedAt?.toIso8601String(),
+  'completed_at': instance.completedAt?.toIso8601String(),
+  'total_checkpoints': instance.totalCheckpoints,
+  'completed_checkpoints': instance.completedCheckpoints,
+  'checkpoints': instance.checkpoints.map((e) => e.toJson()).toList(),
+  'points_awarded': instance.pointsAwarded,
+};
+
+TeamQuestRunReadinessRequest _$TeamQuestRunReadinessRequestFromJson(
+  Map<String, dynamic> json,
+) => TeamQuestRunReadinessRequest(
+  questId: (json['quest_id'] as num).toInt(),
+  isReady: json['is_ready'] as bool,
+);
+
+Map<String, dynamic> _$TeamQuestRunReadinessRequestToJson(
+  TeamQuestRunReadinessRequest instance,
+) => <String, dynamic>{
+  'quest_id': instance.questId,
+  'is_ready': instance.isReady,
+};
+
 TeamRatingPageResponse _$TeamRatingPageResponseFromJson(
   Map<String, dynamic> json,
 ) => TeamRatingPageResponse(
@@ -602,6 +727,19 @@ Map<String, dynamic> _$UserResponseToJson(UserResponse instance) =>
       'role': userRoleSchemaToJson(instance.role),
       'team_name': instance.teamName,
       'total_points': instance.totalPoints,
+    };
+
+UserUpdate _$UserUpdateFromJson(Map<String, dynamic> json) => UserUpdate(
+  username: json['username'] as String?,
+  birthdate: json['birthdate'] == null
+      ? null
+      : DateTime.parse(json['birthdate'] as String),
+);
+
+Map<String, dynamic> _$UserUpdateToJson(UserUpdate instance) =>
+    <String, dynamic>{
+      'username': instance.username,
+      'birthdate': _dateToJson(instance.birthdate),
     };
 
 ValidationError _$ValidationErrorFromJson(

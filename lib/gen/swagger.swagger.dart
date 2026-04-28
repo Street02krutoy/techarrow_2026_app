@@ -263,6 +263,35 @@ abstract class Swagger extends ChopperService {
     ),
   });
 
+  ///Update current user
+  Future<chopper.Response<UserResponse>> apiAuthMePatch({
+    required UserUpdate? body,
+  }) {
+    generatedMapping.putIfAbsent(
+      UserResponse,
+      () => UserResponse.fromJsonFactory,
+    );
+
+    return _apiAuthMePatch(body: body);
+  }
+
+  ///Update current user
+  @PATCH(path: '/api/auth/me', optionalBody: true)
+  Future<chopper.Response<UserResponse>> _apiAuthMePatch({
+    @Body() required UserUpdate? body,
+    @chopper.Tag()
+    SwaggerMetaData swaggerMetaData = const SwaggerMetaData(
+      description: '',
+      summary: 'Update current user',
+      operationId: 'update_me_api_auth_me_patch',
+      consumes: [],
+      produces: [],
+      security: ["HTTPBearer"],
+      tags: ["Authorization"],
+      deprecated: false,
+    ),
+  });
+
   ///Create Team
   Future<chopper.Response<TeamResponse>> apiTeamsPost({
     required TeamCreate? body,
@@ -946,6 +975,106 @@ abstract class Swagger extends ChopperService {
       produces: [],
       security: ["HTTPBearer"],
       tags: ["Quest Runs"],
+      deprecated: false,
+    ),
+  });
+
+  ///Update Team Quest Run Readiness
+  Future<chopper.Response<TeamQuestRunProgressResponse>> apiTeamQuestRunsPatch({
+    required TeamQuestRunReadinessRequest? body,
+  }) {
+    generatedMapping.putIfAbsent(
+      TeamQuestRunProgressResponse,
+      () => TeamQuestRunProgressResponse.fromJsonFactory,
+    );
+
+    return _apiTeamQuestRunsPatch(body: body);
+  }
+
+  ///Update Team Quest Run Readiness
+  @PATCH(path: '/api/team-quest-runs', optionalBody: true)
+  Future<chopper.Response<TeamQuestRunProgressResponse>>
+  _apiTeamQuestRunsPatch({
+    @Body() required TeamQuestRunReadinessRequest? body,
+    @chopper.Tag()
+    SwaggerMetaData swaggerMetaData = const SwaggerMetaData(
+      description: '',
+      summary: 'Update Team Quest Run Readiness',
+      operationId: 'update_team_quest_run_readiness_api_team_quest_runs_patch',
+      consumes: [],
+      produces: [],
+      security: ["HTTPBearer"],
+      tags: ["Team Quest Runs"],
+      deprecated: false,
+    ),
+  });
+
+  ///Get Active Team Quest Run
+  Future<chopper.Response<TeamQuestRunProgressResponse>>
+  apiTeamQuestRunsActiveGet() {
+    generatedMapping.putIfAbsent(
+      TeamQuestRunProgressResponse,
+      () => TeamQuestRunProgressResponse.fromJsonFactory,
+    );
+
+    return _apiTeamQuestRunsActiveGet();
+  }
+
+  ///Get Active Team Quest Run
+  @GET(path: '/api/team-quest-runs/active')
+  Future<chopper.Response<TeamQuestRunProgressResponse>>
+  _apiTeamQuestRunsActiveGet({
+    @chopper.Tag()
+    SwaggerMetaData swaggerMetaData = const SwaggerMetaData(
+      description: '',
+      summary: 'Get Active Team Quest Run',
+      operationId: 'get_active_team_quest_run_api_team_quest_runs_active_get',
+      consumes: [],
+      produces: [],
+      security: ["HTTPBearer"],
+      tags: ["Team Quest Runs"],
+      deprecated: false,
+    ),
+  });
+
+  ///Submit Team Quest Checkpoint Answer
+  ///@param checkpoint_id
+  Future<chopper.Response<TeamQuestRunCheckpointAnswerResponse>>
+  apiTeamQuestRunsActiveCheckpointsCheckpointIdAnswerPost({
+    required int? checkpointId,
+    required TeamQuestRunCheckpointAnswerRequest? body,
+  }) {
+    generatedMapping.putIfAbsent(
+      TeamQuestRunCheckpointAnswerResponse,
+      () => TeamQuestRunCheckpointAnswerResponse.fromJsonFactory,
+    );
+
+    return _apiTeamQuestRunsActiveCheckpointsCheckpointIdAnswerPost(
+      checkpointId: checkpointId,
+      body: body,
+    );
+  }
+
+  ///Submit Team Quest Checkpoint Answer
+  ///@param checkpoint_id
+  @POST(
+    path: '/api/team-quest-runs/active/checkpoints/{checkpoint_id}/answer',
+    optionalBody: true,
+  )
+  Future<chopper.Response<TeamQuestRunCheckpointAnswerResponse>>
+  _apiTeamQuestRunsActiveCheckpointsCheckpointIdAnswerPost({
+    @Path('checkpoint_id') required int? checkpointId,
+    @Body() required TeamQuestRunCheckpointAnswerRequest? body,
+    @chopper.Tag()
+    SwaggerMetaData swaggerMetaData = const SwaggerMetaData(
+      description: '',
+      summary: 'Submit Team Quest Checkpoint Answer',
+      operationId:
+          'submit_team_quest_checkpoint_answer_api_team_quest_runs_active_checkpoints__checkpoint_id__answer_post',
+      consumes: [],
+      produces: [],
+      security: ["HTTPBearer"],
+      tags: ["Team Quest Runs"],
       deprecated: false,
     ),
   });
@@ -3563,6 +3692,577 @@ extension $TeamMemberResponseExtension on TeamMemberResponse {
 }
 
 @JsonSerializable(explicitToJson: true)
+class TeamQuestRunCheckpointAnswerRequest {
+  const TeamQuestRunCheckpointAnswerRequest({required this.answer});
+
+  factory TeamQuestRunCheckpointAnswerRequest.fromJson(
+    Map<String, dynamic> json,
+  ) => _$TeamQuestRunCheckpointAnswerRequestFromJson(json);
+
+  static const toJsonFactory = _$TeamQuestRunCheckpointAnswerRequestToJson;
+  Map<String, dynamic> toJson() =>
+      _$TeamQuestRunCheckpointAnswerRequestToJson(this);
+
+  @JsonKey(name: 'answer')
+  final String answer;
+  static const fromJsonFactory = _$TeamQuestRunCheckpointAnswerRequestFromJson;
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other is TeamQuestRunCheckpointAnswerRequest &&
+            (identical(other.answer, answer) ||
+                const DeepCollectionEquality().equals(other.answer, answer)));
+  }
+
+  @override
+  String toString() => jsonEncode(this);
+
+  @override
+  int get hashCode =>
+      const DeepCollectionEquality().hash(answer) ^ runtimeType.hashCode;
+}
+
+extension $TeamQuestRunCheckpointAnswerRequestExtension
+    on TeamQuestRunCheckpointAnswerRequest {
+  TeamQuestRunCheckpointAnswerRequest copyWith({String? answer}) {
+    return TeamQuestRunCheckpointAnswerRequest(answer: answer ?? this.answer);
+  }
+
+  TeamQuestRunCheckpointAnswerRequest copyWithWrapped({
+    Wrapped<String>? answer,
+  }) {
+    return TeamQuestRunCheckpointAnswerRequest(
+      answer: (answer != null ? answer.value : this.answer),
+    );
+  }
+}
+
+@JsonSerializable(explicitToJson: true)
+class TeamQuestRunCheckpointAnswerResponse {
+  const TeamQuestRunCheckpointAnswerResponse({
+    required this.correct,
+    required this.progress,
+    this.pointsEarned,
+  });
+
+  factory TeamQuestRunCheckpointAnswerResponse.fromJson(
+    Map<String, dynamic> json,
+  ) => _$TeamQuestRunCheckpointAnswerResponseFromJson(json);
+
+  static const toJsonFactory = _$TeamQuestRunCheckpointAnswerResponseToJson;
+  Map<String, dynamic> toJson() =>
+      _$TeamQuestRunCheckpointAnswerResponseToJson(this);
+
+  @JsonKey(name: 'correct')
+  final bool correct;
+  @JsonKey(name: 'progress')
+  final TeamQuestRunProgressResponse progress;
+  @JsonKey(name: 'points_earned')
+  final int? pointsEarned;
+  static const fromJsonFactory = _$TeamQuestRunCheckpointAnswerResponseFromJson;
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other is TeamQuestRunCheckpointAnswerResponse &&
+            (identical(other.correct, correct) ||
+                const DeepCollectionEquality().equals(
+                  other.correct,
+                  correct,
+                )) &&
+            (identical(other.progress, progress) ||
+                const DeepCollectionEquality().equals(
+                  other.progress,
+                  progress,
+                )) &&
+            (identical(other.pointsEarned, pointsEarned) ||
+                const DeepCollectionEquality().equals(
+                  other.pointsEarned,
+                  pointsEarned,
+                )));
+  }
+
+  @override
+  String toString() => jsonEncode(this);
+
+  @override
+  int get hashCode =>
+      const DeepCollectionEquality().hash(correct) ^
+      const DeepCollectionEquality().hash(progress) ^
+      const DeepCollectionEquality().hash(pointsEarned) ^
+      runtimeType.hashCode;
+}
+
+extension $TeamQuestRunCheckpointAnswerResponseExtension
+    on TeamQuestRunCheckpointAnswerResponse {
+  TeamQuestRunCheckpointAnswerResponse copyWith({
+    bool? correct,
+    TeamQuestRunProgressResponse? progress,
+    int? pointsEarned,
+  }) {
+    return TeamQuestRunCheckpointAnswerResponse(
+      correct: correct ?? this.correct,
+      progress: progress ?? this.progress,
+      pointsEarned: pointsEarned ?? this.pointsEarned,
+    );
+  }
+
+  TeamQuestRunCheckpointAnswerResponse copyWithWrapped({
+    Wrapped<bool>? correct,
+    Wrapped<TeamQuestRunProgressResponse>? progress,
+    Wrapped<int?>? pointsEarned,
+  }) {
+    return TeamQuestRunCheckpointAnswerResponse(
+      correct: (correct != null ? correct.value : this.correct),
+      progress: (progress != null ? progress.value : this.progress),
+      pointsEarned: (pointsEarned != null
+          ? pointsEarned.value
+          : this.pointsEarned),
+    );
+  }
+}
+
+@JsonSerializable(explicitToJson: true)
+class TeamQuestRunCheckpointView {
+  const TeamQuestRunCheckpointView({
+    required this.id,
+    required this.title,
+    required this.latitude,
+    required this.longitude,
+    required this.task,
+    required this.hint,
+    required this.pointRules,
+    required this.isCompleted,
+    required this.completedByUserId,
+    required this.completedAt,
+  });
+
+  factory TeamQuestRunCheckpointView.fromJson(Map<String, dynamic> json) =>
+      _$TeamQuestRunCheckpointViewFromJson(json);
+
+  static const toJsonFactory = _$TeamQuestRunCheckpointViewToJson;
+  Map<String, dynamic> toJson() => _$TeamQuestRunCheckpointViewToJson(this);
+
+  @JsonKey(name: 'id')
+  final int id;
+  @JsonKey(name: 'title')
+  final String title;
+  @JsonKey(name: 'latitude')
+  final double latitude;
+  @JsonKey(name: 'longitude')
+  final double longitude;
+  @JsonKey(name: 'task')
+  final String task;
+  @JsonKey(name: 'hint')
+  final String? hint;
+  @JsonKey(name: 'point_rules')
+  final String? pointRules;
+  @JsonKey(name: 'is_completed')
+  final bool isCompleted;
+  @JsonKey(name: 'completed_by_user_id')
+  final int? completedByUserId;
+  @JsonKey(name: 'completed_at')
+  final DateTime? completedAt;
+  static const fromJsonFactory = _$TeamQuestRunCheckpointViewFromJson;
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other is TeamQuestRunCheckpointView &&
+            (identical(other.id, id) ||
+                const DeepCollectionEquality().equals(other.id, id)) &&
+            (identical(other.title, title) ||
+                const DeepCollectionEquality().equals(other.title, title)) &&
+            (identical(other.latitude, latitude) ||
+                const DeepCollectionEquality().equals(
+                  other.latitude,
+                  latitude,
+                )) &&
+            (identical(other.longitude, longitude) ||
+                const DeepCollectionEquality().equals(
+                  other.longitude,
+                  longitude,
+                )) &&
+            (identical(other.task, task) ||
+                const DeepCollectionEquality().equals(other.task, task)) &&
+            (identical(other.hint, hint) ||
+                const DeepCollectionEquality().equals(other.hint, hint)) &&
+            (identical(other.pointRules, pointRules) ||
+                const DeepCollectionEquality().equals(
+                  other.pointRules,
+                  pointRules,
+                )) &&
+            (identical(other.isCompleted, isCompleted) ||
+                const DeepCollectionEquality().equals(
+                  other.isCompleted,
+                  isCompleted,
+                )) &&
+            (identical(other.completedByUserId, completedByUserId) ||
+                const DeepCollectionEquality().equals(
+                  other.completedByUserId,
+                  completedByUserId,
+                )) &&
+            (identical(other.completedAt, completedAt) ||
+                const DeepCollectionEquality().equals(
+                  other.completedAt,
+                  completedAt,
+                )));
+  }
+
+  @override
+  String toString() => jsonEncode(this);
+
+  @override
+  int get hashCode =>
+      const DeepCollectionEquality().hash(id) ^
+      const DeepCollectionEquality().hash(title) ^
+      const DeepCollectionEquality().hash(latitude) ^
+      const DeepCollectionEquality().hash(longitude) ^
+      const DeepCollectionEquality().hash(task) ^
+      const DeepCollectionEquality().hash(hint) ^
+      const DeepCollectionEquality().hash(pointRules) ^
+      const DeepCollectionEquality().hash(isCompleted) ^
+      const DeepCollectionEquality().hash(completedByUserId) ^
+      const DeepCollectionEquality().hash(completedAt) ^
+      runtimeType.hashCode;
+}
+
+extension $TeamQuestRunCheckpointViewExtension on TeamQuestRunCheckpointView {
+  TeamQuestRunCheckpointView copyWith({
+    int? id,
+    String? title,
+    double? latitude,
+    double? longitude,
+    String? task,
+    String? hint,
+    String? pointRules,
+    bool? isCompleted,
+    int? completedByUserId,
+    DateTime? completedAt,
+  }) {
+    return TeamQuestRunCheckpointView(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      task: task ?? this.task,
+      hint: hint ?? this.hint,
+      pointRules: pointRules ?? this.pointRules,
+      isCompleted: isCompleted ?? this.isCompleted,
+      completedByUserId: completedByUserId ?? this.completedByUserId,
+      completedAt: completedAt ?? this.completedAt,
+    );
+  }
+
+  TeamQuestRunCheckpointView copyWithWrapped({
+    Wrapped<int>? id,
+    Wrapped<String>? title,
+    Wrapped<double>? latitude,
+    Wrapped<double>? longitude,
+    Wrapped<String>? task,
+    Wrapped<String?>? hint,
+    Wrapped<String?>? pointRules,
+    Wrapped<bool>? isCompleted,
+    Wrapped<int?>? completedByUserId,
+    Wrapped<DateTime?>? completedAt,
+  }) {
+    return TeamQuestRunCheckpointView(
+      id: (id != null ? id.value : this.id),
+      title: (title != null ? title.value : this.title),
+      latitude: (latitude != null ? latitude.value : this.latitude),
+      longitude: (longitude != null ? longitude.value : this.longitude),
+      task: (task != null ? task.value : this.task),
+      hint: (hint != null ? hint.value : this.hint),
+      pointRules: (pointRules != null ? pointRules.value : this.pointRules),
+      isCompleted: (isCompleted != null ? isCompleted.value : this.isCompleted),
+      completedByUserId: (completedByUserId != null
+          ? completedByUserId.value
+          : this.completedByUserId),
+      completedAt: (completedAt != null ? completedAt.value : this.completedAt),
+    );
+  }
+}
+
+@JsonSerializable(explicitToJson: true)
+class TeamQuestRunProgressResponse {
+  const TeamQuestRunProgressResponse({
+    required this.runId,
+    required this.teamId,
+    required this.questId,
+    required this.status,
+    required this.readyMemberIds,
+    required this.totalMembers,
+    required this.startsAt,
+    required this.startedAt,
+    required this.completedAt,
+    required this.totalCheckpoints,
+    required this.completedCheckpoints,
+    required this.checkpoints,
+    required this.pointsAwarded,
+  });
+
+  factory TeamQuestRunProgressResponse.fromJson(Map<String, dynamic> json) =>
+      _$TeamQuestRunProgressResponseFromJson(json);
+
+  static const toJsonFactory = _$TeamQuestRunProgressResponseToJson;
+  Map<String, dynamic> toJson() => _$TeamQuestRunProgressResponseToJson(this);
+
+  @JsonKey(name: 'run_id')
+  final int runId;
+  @JsonKey(name: 'team_id')
+  final int teamId;
+  @JsonKey(name: 'quest_id')
+  final int questId;
+  @JsonKey(
+    name: 'status',
+    toJson: teamQuestRunStatusSchemaToJson,
+    fromJson: teamQuestRunStatusSchemaFromJson,
+  )
+  final enums.TeamQuestRunStatusSchema status;
+  @JsonKey(name: 'ready_member_ids', defaultValue: <int>[])
+  final List<int> readyMemberIds;
+  @JsonKey(name: 'total_members')
+  final int totalMembers;
+  @JsonKey(name: 'starts_at')
+  final DateTime? startsAt;
+  @JsonKey(name: 'started_at')
+  final DateTime? startedAt;
+  @JsonKey(name: 'completed_at')
+  final DateTime? completedAt;
+  @JsonKey(name: 'total_checkpoints')
+  final int totalCheckpoints;
+  @JsonKey(name: 'completed_checkpoints')
+  final int completedCheckpoints;
+  @JsonKey(name: 'checkpoints', defaultValue: <TeamQuestRunCheckpointView>[])
+  final List<TeamQuestRunCheckpointView> checkpoints;
+  @JsonKey(name: 'points_awarded')
+  final int? pointsAwarded;
+  static const fromJsonFactory = _$TeamQuestRunProgressResponseFromJson;
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other is TeamQuestRunProgressResponse &&
+            (identical(other.runId, runId) ||
+                const DeepCollectionEquality().equals(other.runId, runId)) &&
+            (identical(other.teamId, teamId) ||
+                const DeepCollectionEquality().equals(other.teamId, teamId)) &&
+            (identical(other.questId, questId) ||
+                const DeepCollectionEquality().equals(
+                  other.questId,
+                  questId,
+                )) &&
+            (identical(other.status, status) ||
+                const DeepCollectionEquality().equals(other.status, status)) &&
+            (identical(other.readyMemberIds, readyMemberIds) ||
+                const DeepCollectionEquality().equals(
+                  other.readyMemberIds,
+                  readyMemberIds,
+                )) &&
+            (identical(other.totalMembers, totalMembers) ||
+                const DeepCollectionEquality().equals(
+                  other.totalMembers,
+                  totalMembers,
+                )) &&
+            (identical(other.startsAt, startsAt) ||
+                const DeepCollectionEquality().equals(
+                  other.startsAt,
+                  startsAt,
+                )) &&
+            (identical(other.startedAt, startedAt) ||
+                const DeepCollectionEquality().equals(
+                  other.startedAt,
+                  startedAt,
+                )) &&
+            (identical(other.completedAt, completedAt) ||
+                const DeepCollectionEquality().equals(
+                  other.completedAt,
+                  completedAt,
+                )) &&
+            (identical(other.totalCheckpoints, totalCheckpoints) ||
+                const DeepCollectionEquality().equals(
+                  other.totalCheckpoints,
+                  totalCheckpoints,
+                )) &&
+            (identical(other.completedCheckpoints, completedCheckpoints) ||
+                const DeepCollectionEquality().equals(
+                  other.completedCheckpoints,
+                  completedCheckpoints,
+                )) &&
+            (identical(other.checkpoints, checkpoints) ||
+                const DeepCollectionEquality().equals(
+                  other.checkpoints,
+                  checkpoints,
+                )) &&
+            (identical(other.pointsAwarded, pointsAwarded) ||
+                const DeepCollectionEquality().equals(
+                  other.pointsAwarded,
+                  pointsAwarded,
+                )));
+  }
+
+  @override
+  String toString() => jsonEncode(this);
+
+  @override
+  int get hashCode =>
+      const DeepCollectionEquality().hash(runId) ^
+      const DeepCollectionEquality().hash(teamId) ^
+      const DeepCollectionEquality().hash(questId) ^
+      const DeepCollectionEquality().hash(status) ^
+      const DeepCollectionEquality().hash(readyMemberIds) ^
+      const DeepCollectionEquality().hash(totalMembers) ^
+      const DeepCollectionEquality().hash(startsAt) ^
+      const DeepCollectionEquality().hash(startedAt) ^
+      const DeepCollectionEquality().hash(completedAt) ^
+      const DeepCollectionEquality().hash(totalCheckpoints) ^
+      const DeepCollectionEquality().hash(completedCheckpoints) ^
+      const DeepCollectionEquality().hash(checkpoints) ^
+      const DeepCollectionEquality().hash(pointsAwarded) ^
+      runtimeType.hashCode;
+}
+
+extension $TeamQuestRunProgressResponseExtension
+    on TeamQuestRunProgressResponse {
+  TeamQuestRunProgressResponse copyWith({
+    int? runId,
+    int? teamId,
+    int? questId,
+    enums.TeamQuestRunStatusSchema? status,
+    List<int>? readyMemberIds,
+    int? totalMembers,
+    DateTime? startsAt,
+    DateTime? startedAt,
+    DateTime? completedAt,
+    int? totalCheckpoints,
+    int? completedCheckpoints,
+    List<TeamQuestRunCheckpointView>? checkpoints,
+    int? pointsAwarded,
+  }) {
+    return TeamQuestRunProgressResponse(
+      runId: runId ?? this.runId,
+      teamId: teamId ?? this.teamId,
+      questId: questId ?? this.questId,
+      status: status ?? this.status,
+      readyMemberIds: readyMemberIds ?? this.readyMemberIds,
+      totalMembers: totalMembers ?? this.totalMembers,
+      startsAt: startsAt ?? this.startsAt,
+      startedAt: startedAt ?? this.startedAt,
+      completedAt: completedAt ?? this.completedAt,
+      totalCheckpoints: totalCheckpoints ?? this.totalCheckpoints,
+      completedCheckpoints: completedCheckpoints ?? this.completedCheckpoints,
+      checkpoints: checkpoints ?? this.checkpoints,
+      pointsAwarded: pointsAwarded ?? this.pointsAwarded,
+    );
+  }
+
+  TeamQuestRunProgressResponse copyWithWrapped({
+    Wrapped<int>? runId,
+    Wrapped<int>? teamId,
+    Wrapped<int>? questId,
+    Wrapped<enums.TeamQuestRunStatusSchema>? status,
+    Wrapped<List<int>>? readyMemberIds,
+    Wrapped<int>? totalMembers,
+    Wrapped<DateTime?>? startsAt,
+    Wrapped<DateTime?>? startedAt,
+    Wrapped<DateTime?>? completedAt,
+    Wrapped<int>? totalCheckpoints,
+    Wrapped<int>? completedCheckpoints,
+    Wrapped<List<TeamQuestRunCheckpointView>>? checkpoints,
+    Wrapped<int?>? pointsAwarded,
+  }) {
+    return TeamQuestRunProgressResponse(
+      runId: (runId != null ? runId.value : this.runId),
+      teamId: (teamId != null ? teamId.value : this.teamId),
+      questId: (questId != null ? questId.value : this.questId),
+      status: (status != null ? status.value : this.status),
+      readyMemberIds: (readyMemberIds != null
+          ? readyMemberIds.value
+          : this.readyMemberIds),
+      totalMembers: (totalMembers != null
+          ? totalMembers.value
+          : this.totalMembers),
+      startsAt: (startsAt != null ? startsAt.value : this.startsAt),
+      startedAt: (startedAt != null ? startedAt.value : this.startedAt),
+      completedAt: (completedAt != null ? completedAt.value : this.completedAt),
+      totalCheckpoints: (totalCheckpoints != null
+          ? totalCheckpoints.value
+          : this.totalCheckpoints),
+      completedCheckpoints: (completedCheckpoints != null
+          ? completedCheckpoints.value
+          : this.completedCheckpoints),
+      checkpoints: (checkpoints != null ? checkpoints.value : this.checkpoints),
+      pointsAwarded: (pointsAwarded != null
+          ? pointsAwarded.value
+          : this.pointsAwarded),
+    );
+  }
+}
+
+@JsonSerializable(explicitToJson: true)
+class TeamQuestRunReadinessRequest {
+  const TeamQuestRunReadinessRequest({
+    required this.questId,
+    required this.isReady,
+  });
+
+  factory TeamQuestRunReadinessRequest.fromJson(Map<String, dynamic> json) =>
+      _$TeamQuestRunReadinessRequestFromJson(json);
+
+  static const toJsonFactory = _$TeamQuestRunReadinessRequestToJson;
+  Map<String, dynamic> toJson() => _$TeamQuestRunReadinessRequestToJson(this);
+
+  @JsonKey(name: 'quest_id')
+  final int questId;
+  @JsonKey(name: 'is_ready')
+  final bool isReady;
+  static const fromJsonFactory = _$TeamQuestRunReadinessRequestFromJson;
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other is TeamQuestRunReadinessRequest &&
+            (identical(other.questId, questId) ||
+                const DeepCollectionEquality().equals(
+                  other.questId,
+                  questId,
+                )) &&
+            (identical(other.isReady, isReady) ||
+                const DeepCollectionEquality().equals(other.isReady, isReady)));
+  }
+
+  @override
+  String toString() => jsonEncode(this);
+
+  @override
+  int get hashCode =>
+      const DeepCollectionEquality().hash(questId) ^
+      const DeepCollectionEquality().hash(isReady) ^
+      runtimeType.hashCode;
+}
+
+extension $TeamQuestRunReadinessRequestExtension
+    on TeamQuestRunReadinessRequest {
+  TeamQuestRunReadinessRequest copyWith({int? questId, bool? isReady}) {
+    return TeamQuestRunReadinessRequest(
+      questId: questId ?? this.questId,
+      isReady: isReady ?? this.isReady,
+    );
+  }
+
+  TeamQuestRunReadinessRequest copyWithWrapped({
+    Wrapped<int>? questId,
+    Wrapped<bool>? isReady,
+  }) {
+    return TeamQuestRunReadinessRequest(
+      questId: (questId != null ? questId.value : this.questId),
+      isReady: (isReady != null ? isReady.value : this.isReady),
+    );
+  }
+}
+
+@JsonSerializable(explicitToJson: true)
 class TeamRatingPageResponse {
   const TeamRatingPageResponse({
     required this.items,
@@ -4197,6 +4897,67 @@ extension $UserResponseExtension on UserResponse {
 }
 
 @JsonSerializable(explicitToJson: true)
+class UserUpdate {
+  const UserUpdate({this.username, this.birthdate});
+
+  factory UserUpdate.fromJson(Map<String, dynamic> json) =>
+      _$UserUpdateFromJson(json);
+
+  static const toJsonFactory = _$UserUpdateToJson;
+  Map<String, dynamic> toJson() => _$UserUpdateToJson(this);
+
+  @JsonKey(name: 'username')
+  final String? username;
+  @JsonKey(name: 'birthdate', toJson: _dateToJson)
+  final DateTime? birthdate;
+  static const fromJsonFactory = _$UserUpdateFromJson;
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other is UserUpdate &&
+            (identical(other.username, username) ||
+                const DeepCollectionEquality().equals(
+                  other.username,
+                  username,
+                )) &&
+            (identical(other.birthdate, birthdate) ||
+                const DeepCollectionEquality().equals(
+                  other.birthdate,
+                  birthdate,
+                )));
+  }
+
+  @override
+  String toString() => jsonEncode(this);
+
+  @override
+  int get hashCode =>
+      const DeepCollectionEquality().hash(username) ^
+      const DeepCollectionEquality().hash(birthdate) ^
+      runtimeType.hashCode;
+}
+
+extension $UserUpdateExtension on UserUpdate {
+  UserUpdate copyWith({String? username, DateTime? birthdate}) {
+    return UserUpdate(
+      username: username ?? this.username,
+      birthdate: birthdate ?? this.birthdate,
+    );
+  }
+
+  UserUpdate copyWithWrapped({
+    Wrapped<String?>? username,
+    Wrapped<DateTime?>? birthdate,
+  }) {
+    return UserUpdate(
+      username: (username != null ? username.value : this.username),
+      birthdate: (birthdate != null ? birthdate.value : this.birthdate),
+    );
+  }
+}
+
+@JsonSerializable(explicitToJson: true)
 class ValidationError {
   const ValidationError({
     required this.loc,
@@ -4517,6 +5278,85 @@ List<enums.QuestStatusSchema>? questStatusSchemaNullableListFromJson(
 
   return questStatusSchema
       .map((e) => questStatusSchemaFromJson(e.toString()))
+      .toList();
+}
+
+String? teamQuestRunStatusSchemaNullableToJson(
+  enums.TeamQuestRunStatusSchema? teamQuestRunStatusSchema,
+) {
+  return teamQuestRunStatusSchema?.value;
+}
+
+String? teamQuestRunStatusSchemaToJson(
+  enums.TeamQuestRunStatusSchema teamQuestRunStatusSchema,
+) {
+  return teamQuestRunStatusSchema.value;
+}
+
+enums.TeamQuestRunStatusSchema teamQuestRunStatusSchemaFromJson(
+  Object? teamQuestRunStatusSchema, [
+  enums.TeamQuestRunStatusSchema? defaultValue,
+]) {
+  return enums.TeamQuestRunStatusSchema.values.firstWhereOrNull(
+        (e) => e.value == teamQuestRunStatusSchema,
+      ) ??
+      defaultValue ??
+      enums.TeamQuestRunStatusSchema.swaggerGeneratedUnknown;
+}
+
+enums.TeamQuestRunStatusSchema? teamQuestRunStatusSchemaNullableFromJson(
+  Object? teamQuestRunStatusSchema, [
+  enums.TeamQuestRunStatusSchema? defaultValue,
+]) {
+  if (teamQuestRunStatusSchema == null) {
+    return null;
+  }
+  return enums.TeamQuestRunStatusSchema.values.firstWhereOrNull(
+        (e) => e.value == teamQuestRunStatusSchema,
+      ) ??
+      defaultValue;
+}
+
+String teamQuestRunStatusSchemaExplodedListToJson(
+  List<enums.TeamQuestRunStatusSchema>? teamQuestRunStatusSchema,
+) {
+  return teamQuestRunStatusSchema?.map((e) => e.value!).join(',') ?? '';
+}
+
+List<String> teamQuestRunStatusSchemaListToJson(
+  List<enums.TeamQuestRunStatusSchema>? teamQuestRunStatusSchema,
+) {
+  if (teamQuestRunStatusSchema == null) {
+    return [];
+  }
+
+  return teamQuestRunStatusSchema.map((e) => e.value!).toList();
+}
+
+List<enums.TeamQuestRunStatusSchema> teamQuestRunStatusSchemaListFromJson(
+  List? teamQuestRunStatusSchema, [
+  List<enums.TeamQuestRunStatusSchema>? defaultValue,
+]) {
+  if (teamQuestRunStatusSchema == null) {
+    return defaultValue ?? [];
+  }
+
+  return teamQuestRunStatusSchema
+      .map((e) => teamQuestRunStatusSchemaFromJson(e.toString()))
+      .toList();
+}
+
+List<enums.TeamQuestRunStatusSchema>?
+teamQuestRunStatusSchemaNullableListFromJson(
+  List? teamQuestRunStatusSchema, [
+  List<enums.TeamQuestRunStatusSchema>? defaultValue,
+]) {
+  if (teamQuestRunStatusSchema == null) {
+    return defaultValue;
+  }
+
+  return teamQuestRunStatusSchema
+      .map((e) => teamQuestRunStatusSchemaFromJson(e.toString()))
       .toList();
 }
 

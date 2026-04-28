@@ -52,6 +52,24 @@ enum QuestStatusSchema {
   const QuestStatusSchema(this.value);
 }
 
+enum TeamQuestRunStatusSchema {
+  @JsonValue(null)
+  swaggerGeneratedUnknown(null),
+
+  @JsonValue('waiting_for_team')
+  waitingForTeam('waiting_for_team'),
+  @JsonValue('starting')
+  starting('starting'),
+  @JsonValue('in_progress')
+  inProgress('in_progress'),
+  @JsonValue('completed')
+  completed('completed');
+
+  final String? value;
+
+  const TeamQuestRunStatusSchema(this.value);
+}
+
 enum UserRoleSchema {
   @JsonValue(null)
   swaggerGeneratedUnknown(null),

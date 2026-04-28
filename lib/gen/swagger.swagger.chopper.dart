@@ -219,6 +219,32 @@ final class _$Swagger extends Swagger {
   }
 
   @override
+  Future<Response<UserResponse>> _apiAuthMePatch({
+    required UserUpdate? body,
+    SwaggerMetaData swaggerMetaData = const SwaggerMetaData(
+      description: '',
+      summary: 'Update current user',
+      operationId: 'update_me_api_auth_me_patch',
+      consumes: [],
+      produces: [],
+      security: ["HTTPBearer"],
+      tags: ["Authorization"],
+      deprecated: false,
+    ),
+  }) {
+    final Uri $url = Uri.parse('/api/auth/me');
+    final $body = body;
+    final Request $request = Request(
+      'PATCH',
+      $url,
+      client.baseUrl,
+      body: $body,
+      tag: swaggerMetaData,
+    );
+    return client.send<UserResponse, UserResponse>($request);
+  }
+
+  @override
   Future<Response<TeamResponse>> _apiTeamsPost({
     required TeamCreate? body,
     SwaggerMetaData swaggerMetaData = const SwaggerMetaData(
@@ -780,6 +806,95 @@ final class _$Swagger extends Swagger {
     return client.send<List<QuestRunHistoryItem>, QuestRunHistoryItem>(
       $request,
     );
+  }
+
+  @override
+  Future<Response<TeamQuestRunProgressResponse>> _apiTeamQuestRunsPatch({
+    required TeamQuestRunReadinessRequest? body,
+    SwaggerMetaData swaggerMetaData = const SwaggerMetaData(
+      description: '',
+      summary: 'Update Team Quest Run Readiness',
+      operationId: 'update_team_quest_run_readiness_api_team_quest_runs_patch',
+      consumes: [],
+      produces: [],
+      security: ["HTTPBearer"],
+      tags: ["Team Quest Runs"],
+      deprecated: false,
+    ),
+  }) {
+    final Uri $url = Uri.parse('/api/team-quest-runs');
+    final $body = body;
+    final Request $request = Request(
+      'PATCH',
+      $url,
+      client.baseUrl,
+      body: $body,
+      tag: swaggerMetaData,
+    );
+    return client
+        .send<TeamQuestRunProgressResponse, TeamQuestRunProgressResponse>(
+          $request,
+        );
+  }
+
+  @override
+  Future<Response<TeamQuestRunProgressResponse>> _apiTeamQuestRunsActiveGet({
+    SwaggerMetaData swaggerMetaData = const SwaggerMetaData(
+      description: '',
+      summary: 'Get Active Team Quest Run',
+      operationId: 'get_active_team_quest_run_api_team_quest_runs_active_get',
+      consumes: [],
+      produces: [],
+      security: ["HTTPBearer"],
+      tags: ["Team Quest Runs"],
+      deprecated: false,
+    ),
+  }) {
+    final Uri $url = Uri.parse('/api/team-quest-runs/active');
+    final Request $request = Request(
+      'GET',
+      $url,
+      client.baseUrl,
+      tag: swaggerMetaData,
+    );
+    return client
+        .send<TeamQuestRunProgressResponse, TeamQuestRunProgressResponse>(
+          $request,
+        );
+  }
+
+  @override
+  Future<Response<TeamQuestRunCheckpointAnswerResponse>>
+  _apiTeamQuestRunsActiveCheckpointsCheckpointIdAnswerPost({
+    required int? checkpointId,
+    required TeamQuestRunCheckpointAnswerRequest? body,
+    SwaggerMetaData swaggerMetaData = const SwaggerMetaData(
+      description: '',
+      summary: 'Submit Team Quest Checkpoint Answer',
+      operationId:
+          'submit_team_quest_checkpoint_answer_api_team_quest_runs_active_checkpoints__checkpoint_id__answer_post',
+      consumes: [],
+      produces: [],
+      security: ["HTTPBearer"],
+      tags: ["Team Quest Runs"],
+      deprecated: false,
+    ),
+  }) {
+    final Uri $url = Uri.parse(
+      '/api/team-quest-runs/active/checkpoints/${checkpointId}/answer',
+    );
+    final $body = body;
+    final Request $request = Request(
+      'POST',
+      $url,
+      client.baseUrl,
+      body: $body,
+      tag: swaggerMetaData,
+    );
+    return client.send<
+      TeamQuestRunCheckpointAnswerResponse,
+      TeamQuestRunCheckpointAnswerResponse
+    >($request);
   }
 
   @override

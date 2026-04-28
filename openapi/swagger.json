@@ -226,6 +226,38 @@
           }
         },
         "security": [{ "HTTPBearer": [] }]
+      },
+      "patch": {
+        "tags": ["Authorization"],
+        "summary": "Update current user",
+        "operationId": "update_me_api_auth_me_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UserUpdate" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UserResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        },
+        "security": [{ "HTTPBearer": [] }]
       }
     },
     "/api/teams": {
@@ -1107,6 +1139,110 @@
           }
         },
         "security": [{ "HTTPBearer": [] }]
+      }
+    },
+    "/api/team-quest-runs": {
+      "patch": {
+        "tags": ["Team Quest Runs"],
+        "summary": "Update Team Quest Run Readiness",
+        "operationId": "update_team_quest_run_readiness_api_team_quest_runs_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamQuestRunReadinessRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamQuestRunProgressResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        },
+        "security": [{ "HTTPBearer": [] }]
+      }
+    },
+    "/api/team-quest-runs/active": {
+      "get": {
+        "tags": ["Team Quest Runs"],
+        "summary": "Get Active Team Quest Run",
+        "operationId": "get_active_team_quest_run_api_team_quest_runs_active_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamQuestRunProgressResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [{ "HTTPBearer": [] }]
+      }
+    },
+    "/api/team-quest-runs/active/checkpoints/{checkpoint_id}/answer": {
+      "post": {
+        "tags": ["Team Quest Runs"],
+        "summary": "Submit Team Quest Checkpoint Answer",
+        "operationId": "submit_team_quest_checkpoint_answer_api_team_quest_runs_active_checkpoints__checkpoint_id__answer_post",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "checkpoint_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "title": "Checkpoint Id" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamQuestRunCheckpointAnswerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamQuestRunCheckpointAnswerResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
       }
     },
     "/api/rating/users": {
@@ -2095,6 +2231,166 @@
         "required": ["id", "username", "age"],
         "title": "TeamMemberResponse"
       },
+      "TeamQuestRunCheckpointAnswerRequest": {
+        "properties": {
+          "answer": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Answer"
+          }
+        },
+        "type": "object",
+        "required": ["answer"],
+        "title": "TeamQuestRunCheckpointAnswerRequest"
+      },
+      "TeamQuestRunCheckpointAnswerResponse": {
+        "properties": {
+          "correct": { "type": "boolean", "title": "Correct" },
+          "progress": {
+            "$ref": "#/components/schemas/TeamQuestRunProgressResponse"
+          },
+          "points_earned": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Points Earned"
+          }
+        },
+        "type": "object",
+        "required": ["correct", "progress"],
+        "title": "TeamQuestRunCheckpointAnswerResponse"
+      },
+      "TeamQuestRunCheckpointView": {
+        "properties": {
+          "id": { "type": "integer", "title": "Id" },
+          "title": { "type": "string", "title": "Title" },
+          "latitude": { "type": "number", "title": "Latitude" },
+          "longitude": { "type": "number", "title": "Longitude" },
+          "task": { "type": "string", "title": "Task" },
+          "hint": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Hint"
+          },
+          "point_rules": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Point Rules"
+          },
+          "is_completed": { "type": "boolean", "title": "Is Completed" },
+          "completed_by_user_id": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Completed By User Id"
+          },
+          "completed_at": {
+            "anyOf": [
+              { "type": "string", "format": "date-time" },
+              { "type": "null" }
+            ],
+            "title": "Completed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "latitude",
+          "longitude",
+          "task",
+          "hint",
+          "point_rules",
+          "is_completed",
+          "completed_by_user_id",
+          "completed_at"
+        ],
+        "title": "TeamQuestRunCheckpointView"
+      },
+      "TeamQuestRunProgressResponse": {
+        "properties": {
+          "run_id": { "type": "integer", "title": "Run Id" },
+          "team_id": { "type": "integer", "title": "Team Id" },
+          "quest_id": { "type": "integer", "title": "Quest Id" },
+          "status": { "$ref": "#/components/schemas/TeamQuestRunStatusSchema" },
+          "ready_member_ids": {
+            "items": { "type": "integer" },
+            "type": "array",
+            "title": "Ready Member Ids"
+          },
+          "total_members": { "type": "integer", "title": "Total Members" },
+          "starts_at": {
+            "anyOf": [
+              { "type": "string", "format": "date-time" },
+              { "type": "null" }
+            ],
+            "title": "Starts At"
+          },
+          "started_at": {
+            "anyOf": [
+              { "type": "string", "format": "date-time" },
+              { "type": "null" }
+            ],
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              { "type": "string", "format": "date-time" },
+              { "type": "null" }
+            ],
+            "title": "Completed At"
+          },
+          "total_checkpoints": {
+            "type": "integer",
+            "title": "Total Checkpoints"
+          },
+          "completed_checkpoints": {
+            "type": "integer",
+            "title": "Completed Checkpoints"
+          },
+          "checkpoints": {
+            "items": {
+              "$ref": "#/components/schemas/TeamQuestRunCheckpointView"
+            },
+            "type": "array",
+            "title": "Checkpoints"
+          },
+          "points_awarded": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Points Awarded"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "team_id",
+          "quest_id",
+          "status",
+          "ready_member_ids",
+          "total_members",
+          "starts_at",
+          "started_at",
+          "completed_at",
+          "total_checkpoints",
+          "completed_checkpoints",
+          "checkpoints",
+          "points_awarded"
+        ],
+        "title": "TeamQuestRunProgressResponse"
+      },
+      "TeamQuestRunReadinessRequest": {
+        "properties": {
+          "quest_id": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Quest Id"
+          },
+          "is_ready": { "type": "boolean", "title": "Is Ready" }
+        },
+        "type": "object",
+        "required": ["quest_id", "is_ready"],
+        "title": "TeamQuestRunReadinessRequest"
+      },
+      "TeamQuestRunStatusSchema": {
+        "type": "string",
+        "enum": ["waiting_for_team", "starting", "in_progress", "completed"],
+        "title": "TeamQuestRunStatusSchema"
+      },
       "TeamRatingPageResponse": {
         "properties": {
           "items": {
@@ -2229,6 +2525,26 @@
         "type": "string",
         "enum": ["user", "moderator"],
         "title": "UserRoleSchema"
+      },
+      "UserUpdate": {
+        "properties": {
+          "username": {
+            "anyOf": [
+              { "type": "string", "maxLength": 255, "minLength": 3 },
+              { "type": "null" }
+            ],
+            "title": "Username"
+          },
+          "birthdate": {
+            "anyOf": [
+              { "type": "string", "format": "date" },
+              { "type": "null" }
+            ],
+            "title": "Birthdate"
+          }
+        },
+        "type": "object",
+        "title": "UserUpdate"
       },
       "ValidationError": {
         "properties": {

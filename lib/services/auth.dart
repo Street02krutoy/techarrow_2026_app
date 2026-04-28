@@ -224,4 +224,21 @@ class StreamAuth {
   }
 
   UserResponse? get currentUser => _userData?.user;
+
+  /// Re-fetches `/api/auth/me` and updates local cached user (does not touch tokens).
+  Future<bool> refreshMe() async {
+    if (_userData == null) return false;
+    try {
+      final res = await ApiService.instance.client.apiAuthMeGet();
+      final user = res.body;
+      if (res.isSuccessful && user != null) {
+        final next = UserData(user: user, accessTokenExpiresAt: _userData!.accessTokenExpiresAt);
+        _userData = next;
+        await _storeUserData(next);
+        _userStreamController.add(next);
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  }
 }
