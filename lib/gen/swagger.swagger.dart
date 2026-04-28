@@ -1117,21 +1117,15 @@ abstract class Swagger extends ChopperService {
   });
 
   ///Update Team Quest Run Readiness
-  Future<chopper.Response<TeamQuestRunProgressResponse>> apiTeamQuestRunsPatch({
+  Future<chopper.Response> apiTeamQuestRunsPatch({
     required TeamQuestRunReadinessRequest? body,
   }) {
-    generatedMapping.putIfAbsent(
-      TeamQuestRunProgressResponse,
-      () => TeamQuestRunProgressResponse.fromJsonFactory,
-    );
-
     return _apiTeamQuestRunsPatch(body: body);
   }
 
   ///Update Team Quest Run Readiness
   @PATCH(path: '/api/team-quest-runs', optionalBody: true)
-  Future<chopper.Response<TeamQuestRunProgressResponse>>
-  _apiTeamQuestRunsPatch({
+  Future<chopper.Response> _apiTeamQuestRunsPatch({
     @Body() required TeamQuestRunReadinessRequest? body,
     @chopper.Tag()
     SwaggerMetaData swaggerMetaData = const SwaggerMetaData(

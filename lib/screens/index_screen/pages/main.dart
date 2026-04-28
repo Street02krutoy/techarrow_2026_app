@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:techarrow_2026_app/gen/swagger.swagger.dart';
 import 'package:techarrow_2026_app/models/quest.dart';
 import 'package:techarrow_2026_app/screens/current_quest_screen/screen.dart';
@@ -60,17 +61,17 @@ class _MainPageState extends State<MainPage> {
     super.didChangeDependencies();
     if (_questScopeSubscribed) return;
     _questScopeSubscribed = true;
-    _teamProgressSub = StreamQuestScope.of(
-      context,
-    ).onActiveTeamRunProgressChanged.listen((progress) {
-      if (!mounted || progress == null) return;
-      if (progress.status.value != 'in_progress') return;
-      if (_lastNotifiedTeamRunId == progress.runId) return;
-      _lastNotifiedTeamRunId = progress.runId;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Командный квест начался')),
-      );
-    });
+    _teamProgressSub = StreamQuestScope.of(context)
+        .onActiveTeamRunProgressChanged
+        .listen((progress) {
+          if (!mounted || progress == null) return;
+          if (progress.status.value != 'in_progress') return;
+          if (_lastNotifiedTeamRunId == progress.runId) return;
+          _lastNotifiedTeamRunId = progress.runId;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Командный квест начался')),
+          );
+        });
   }
 
   Quest _mapQuest(QuestResponse item) {
@@ -124,7 +125,8 @@ class _MainPageState extends State<MainPage> {
         minDurationMinutes: _activeFilters?.minDurationMinutes,
         maxDurationMinutes: _activeFilters?.maxDurationMinutes,
         difficulties: _activeFilters?.difficulties,
-        city: _activeFilters?.city,
+        nearLatitude: _activeFilters?.nearLatitude,
+        nearLongitude: _activeFilters?.nearLongitude,
         search: _searchController.text.trim().isEmpty
             ? null
             : _searchController.text.trim(),
@@ -474,25 +476,31 @@ class _MainFiltersSheet extends StatefulWidget {
 }
 
 class _MainFiltersSheetState extends State<_MainFiltersSheet> {
-  final TextEditingController _cityController = TextEditingController();
   final TextEditingController _minDurationController = TextEditingController();
   final TextEditingController _maxDurationController = TextEditingController();
   int? _difficulty;
+  bool _nearMe = false;
+  bool _nearMeEnabled = false;
+  double? _nearLatitude;
+  double? _nearLongitude;
 
   @override
   void initState() {
     super.initState();
     final initial = widget.initialFilters;
-    if (initial == null) return;
-    _cityController.text = initial.city ?? '';
-    _minDurationController.text = initial.minDurationMinutes?.toString() ?? '';
-    _maxDurationController.text = initial.maxDurationMinutes?.toString() ?? '';
-    _difficulty = initial.singleDifficulty;
+    if (initial != null) {
+      _minDurationController.text = initial.minDurationMinutes?.toString() ?? '';
+      _maxDurationController.text = initial.maxDurationMinutes?.toString() ?? '';
+      _difficulty = initial.singleDifficulty;
+      _nearMe = initial.nearMe;
+      _nearLatitude = initial.nearLatitude;
+      _nearLongitude = initial.nearLongitude;
+    }
+    _syncNearMeAvailability();
   }
 
   @override
   void dispose() {
-    _cityController.dispose();
     _minDurationController.dispose();
     _maxDurationController.dispose();
     super.dispose();
@@ -507,6 +515,55 @@ class _MainFiltersSheetState extends State<_MainFiltersSheet> {
       5 => 'Очень сложно',
       _ => '',
     };
+  }
+
+  Future<void> _syncNearMeAvailability() async {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    final permission = await Geolocator.checkPermission();
+    if (!mounted) return;
+    final allowed =
+        serviceEnabled &&
+        (permission == LocationPermission.always ||
+            permission == LocationPermission.whileInUse);
+    setState(() {
+      _nearMeEnabled = allowed;
+      if (!allowed) {
+        _nearMe = false;
+        _nearLatitude = null;
+        _nearLongitude = null;
+      }
+    });
+  }
+
+  Future<void> _onNearMeChanged(bool? value) async {
+    if (value != true) {
+      setState(() {
+        _nearMe = false;
+        _nearLatitude = null;
+        _nearLongitude = null;
+      });
+      return;
+    }
+    if (!_nearMeEnabled) return;
+    try {
+      final position = await Geolocator.getCurrentPosition();
+      if (!mounted) return;
+      setState(() {
+        _nearMe = true;
+        _nearLatitude = position.latitude;
+        _nearLongitude = position.longitude;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _nearMe = false;
+        _nearLatitude = null;
+        _nearLongitude = null;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Не удалось получить геопозицию')),
+      );
+    }
   }
 
   @override
@@ -535,47 +592,6 @@ class _MainFiltersSheetState extends State<_MainFiltersSheet> {
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide(color: colorScheme.primary),
         ),
-      );
-    }
-
-    Widget field({
-      required String label,
-      required TextEditingController controller,
-      String? hint,
-      TextInputType? keyboardType,
-    }) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: textTheme.labelLarge?.copyWith(
-              color: colorScheme.onSurface,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          ValueListenableBuilder<TextEditingValue>(
-            valueListenable: controller,
-            builder: (context, value, _) {
-              return TextField(
-                controller: controller,
-                keyboardType: keyboardType,
-                decoration: fieldDecoration(hint: hint).copyWith(
-                  suffixIcon: value.text.isEmpty
-                      ? null
-                      : IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () => controller.clear(),
-                        ),
-                ),
-                style: textTheme.bodyLarge?.copyWith(
-                  color: colorScheme.onSurface,
-                ),
-              );
-            },
-          ),
-        ],
       );
     }
 
@@ -674,11 +690,28 @@ class _MainFiltersSheetState extends State<_MainFiltersSheet> {
                   }),
                   onChanged: (value) => setState(() => _difficulty = value),
                 ),
-                const SizedBox(height: 14),
-                field(
-                  label: 'Город',
-                  controller: _cityController,
-                  hint: 'Введите город',
+                const SizedBox(height: 10),
+                CheckboxListTile(
+                  value: _nearMe,
+                  onChanged: _nearMeEnabled ? _onNearMeChanged : null,
+                  title: Text(
+                    'Около меня',
+                    style: textTheme.labelLarge?.copyWith(
+                      color: colorScheme.onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  subtitle: !_nearMeEnabled
+                      ? Text(
+                          'Доступ к геолокации не выдан',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        )
+                      : null,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  activeColor: colorScheme.primary,
                 ),
                 const SizedBox(height: 14),
                 Align(
@@ -762,14 +795,15 @@ class _MainFiltersSheetState extends State<_MainFiltersSheet> {
                       final maxDuration = int.tryParse(
                         _maxDurationController.text,
                       );
-                      final city = _cityController.text.trim();
 
                       Navigator.of(context).pop(
                         _QuestFilters(
                           difficulties: _difficulty != null
                               ? [_difficulty]
                               : null,
-                          city: city.isEmpty ? null : city,
+                          nearMe: _nearMe,
+                          nearLatitude: _nearLatitude,
+                          nearLongitude: _nearLongitude,
                           minDurationMinutes: minDuration,
                           maxDurationMinutes: maxDuration,
                         ),
@@ -798,13 +832,17 @@ class _QuestFilters {
     this.minDurationMinutes,
     this.maxDurationMinutes,
     this.difficulties,
-    this.city,
+    this.nearMe = false,
+    this.nearLatitude,
+    this.nearLongitude,
   });
 
   final int? minDurationMinutes;
   final int? maxDurationMinutes;
   final List<dynamic>? difficulties;
-  final String? city;
+  final bool nearMe;
+  final double? nearLatitude;
+  final double? nearLongitude;
 
   int? get singleDifficulty =>
       difficulties?.isNotEmpty == true ? difficulties!.first as int? : null;
@@ -813,5 +851,5 @@ class _QuestFilters {
       minDurationMinutes != null ||
       maxDurationMinutes != null ||
       (difficulties?.isNotEmpty ?? false) ||
-      (city?.isNotEmpty ?? false);
+      nearMe;
 }

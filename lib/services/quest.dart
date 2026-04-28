@@ -67,7 +67,6 @@ class StreamQuest with WidgetsBindingObserver {
     });
     WidgetsBinding.instance.addObserver(this);
     unawaited(_restoreActiveRunOnInit());
-    _startTeamLongPolling();
   }
 
   StreamingQuestSession? _session;
@@ -112,7 +111,6 @@ class StreamQuest with WidgetsBindingObserver {
   DateTime? _startedAt;
   int? _activeQuestId;
   String? _activeQuestName;
-  Timer? _teamLongPoller;
 
   /// Starts tracking [catalogQuest]: pedometer steps since now and wall time from [startedAt].
   ///
@@ -190,30 +188,6 @@ class StreamQuest with WidgetsBindingObserver {
       if (s == null) return;
       _emit(s.copyWith());
     });
-  }
-
-  void _startTeamLongPolling() {
-    _teamLongPoller?.cancel();
-    _teamLongPoller = Timer.periodic(const Duration(seconds: 2), (_) {
-      unawaited(_refreshTeamRunProgress());
-    });
-    unawaited(_refreshTeamRunProgress());
-  }
-
-  Future<void> _refreshTeamRunProgress() async {
-    // While solo run is active, ignore team polling updates.
-    if (_activeQuestId != null) return;
-    try {
-      final res = await ApiService.instance.client.apiTeamQuestRunsActiveGet();
-      final body = res.body;
-      if (res.isSuccessful && body != null) {
-        _teamProgressController?.add(body);
-      } else {
-        _teamProgressController?.add(null);
-      }
-    } catch (_) {
-      // keep previous value on transient failures
-    }
   }
 
   Future<void> refreshActiveRunProgress({
@@ -402,7 +376,6 @@ class StreamQuest with WidgetsBindingObserver {
 
   void dispose() {
     stopSession();
-    _teamLongPoller?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _controller.close();
     _progressController?.close();

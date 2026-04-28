@@ -1338,7 +1338,13 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TeamQuestRunProgressResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/TeamQuestRunProgressResponse"
+                    },
+                    { "type": "null" }
+                  ],
+                  "title": "Response Update Team Quest Run Readiness Api Team Quest Runs Patch"
                 }
               }
             }

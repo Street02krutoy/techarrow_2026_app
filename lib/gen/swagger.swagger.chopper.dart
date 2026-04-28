@@ -932,7 +932,7 @@ final class _$Swagger extends Swagger {
   }
 
   @override
-  Future<Response<TeamQuestRunProgressResponse>> _apiTeamQuestRunsPatch({
+  Future<Response<dynamic>> _apiTeamQuestRunsPatch({
     required TeamQuestRunReadinessRequest? body,
     SwaggerMetaData swaggerMetaData = const SwaggerMetaData(
       description: '',
@@ -954,10 +954,7 @@ final class _$Swagger extends Swagger {
       body: $body,
       tag: swaggerMetaData,
     );
-    return client
-        .send<TeamQuestRunProgressResponse, TeamQuestRunProgressResponse>(
-          $request,
-        );
+    return client.send<dynamic, dynamic>($request);
   }
 
   @override

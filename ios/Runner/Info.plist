@@ -30,6 +30,8 @@
 	<string>Камера нужна для сканирования QR-кода команды.</string>
 	<key>NSMotionUsageDescription</key>
 	<string>Движение и шаги нужны для прохождения квеста.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Геолокация нужна, чтобы показывать квесты около вас.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
