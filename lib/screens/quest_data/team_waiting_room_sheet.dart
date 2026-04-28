@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:techarrow_2026_app/gen/swagger.swagger.dart';
+import 'package:techarrow_2026_app/models/quest.dart';
+import 'package:techarrow_2026_app/screens/current_quest_screen/screen.dart';
 import 'package:techarrow_2026_app/services/api.dart';
 import 'package:techarrow_2026_app/services/auth.dart';
+import 'dart:async';
 
 class TeamWaitingRoomSheet extends StatefulWidget {
   const TeamWaitingRoomSheet({
     super.key,
     required this.questId,
+    required this.quest,
     this.questTitle,
   });
 
   final int questId;
+  final Quest quest;
   final String? questTitle;
 
   @override
@@ -22,12 +27,23 @@ class _TeamWaitingRoomSheetState extends State<TeamWaitingRoomSheet> {
   bool _isUpdating = false;
   TeamQuestRunProgressResponse? _progress;
   TeamResponse? _team;
+  Timer? _pollTimer;
+  bool _navigatedToRun = false;
 
   @override
   void initState() {
     super.initState();
     _loadTeam();
     _refreshProgress();
+    _pollTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _refreshProgress();
+    });
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadTeam() async {
@@ -47,9 +63,24 @@ class _TeamWaitingRoomSheetState extends State<TeamWaitingRoomSheet> {
       final res = await ApiService.instance.client.apiTeamQuestRunsActiveGet();
       if (!mounted) return;
       if (res.isSuccessful && res.body != null) {
+        final me = StreamAuthScope.of(context).currentUser;
         setState(() {
           _progress = res.body;
+          _isReady =
+              me != null ? res.body!.readyMemberIds.contains(me.id) : _isReady;
         });
+        if (!_navigatedToRun &&
+            res.body!.status.value == 'in_progress' &&
+            mounted) {
+          _navigatedToRun = true;
+          _pollTimer?.cancel();
+          Navigator.of(context).pop();
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const CurrentQuestScreen(),
+            ),
+          );
+        }
       }
     } catch (_) {}
   }
@@ -99,7 +130,18 @@ class _TeamWaitingRoomSheetState extends State<TeamWaitingRoomSheet> {
     final me = StreamAuthScope.of(context).currentUser;
     final members = team?.members ?? const <TeamMemberResponse>[];
     final readyIds = _progress?.readyMemberIds ?? const <int>[];
-    const desiredTeamSize = 6;
+    final startsAt = _progress?.startsAt;
+    final now = DateTime.now();
+    final countdownSec = startsAt?.difference(now).inSeconds.clamp(0, 9999);
+    final statusLabel = switch (_progress?.status.value) {
+      'waiting_for_team' => 'Ожидаем готовность всех участников',
+      'starting' => countdownSec == null
+          ? 'Запуск...'
+          : 'Запуск через $countdownSec сек',
+      'in_progress' => 'Квест уже запущен',
+      'completed' => 'Квест завершен',
+      _ => 'Ожидание',
+    };
 
     return SafeArea(
       top: false,
@@ -142,6 +184,11 @@ class _TeamWaitingRoomSheetState extends State<TeamWaitingRoomSheet> {
             Text(
               'ID: ${team?.code ?? '—'}',
               style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              statusLabel,
+              style: tt.bodyMedium?.copyWith(color: cs.primary),
             ),
             const SizedBox(height: 12),
             Flexible(
@@ -199,7 +246,7 @@ class _TeamWaitingRoomSheetState extends State<TeamWaitingRoomSheet> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'В команде должно быть ровно $desiredTeamSize человек',
+                    'Готово: ${readyIds.length}/${_progress?.totalMembers ?? members.length}',
                     style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                   ),
                 ),

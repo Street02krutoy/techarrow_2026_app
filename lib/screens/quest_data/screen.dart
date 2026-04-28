@@ -233,52 +233,50 @@ class _QuestDataScreenState extends State<QuestDataScreen> {
                         isStartingRun = true;
                       });
 
-                      final startRes = await ApiService.instance.client
-                          .apiQuestRunsPost(
-                            body: QuestRunStartRequest(
-                              questId: widget.quest.id,
-                            ),
-                          );
-
-                      if (!context.mounted) return;
-                      if (!startRes.isSuccessful || startRes.body == null) {
-                        setModalState(() {
-                          isStartingRun = false;
-                        });
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Не удалось запустить квест'),
-                          ),
-                        );
-                        return;
-                      }
-                      final initialProgress = startRes.body!;
-
                       final navigator = Navigator.of(context);
                       final surface = Theme.of(context).colorScheme.surface;
-                      final started = await StreamQuestScope.of(
-                        context,
-                      ).startSession(_quest);
-                      if (!context.mounted) return;
-                      if (!started) {
-                        setModalState(() {
-                          isStartingRun = false;
-                        });
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Не удалось включить локальный трекинг',
-                            ),
-                          ),
-                        );
-                        return;
-                      }
-                      StreamQuestScope.of(
-                        context,
-                      ).setActiveRunProgress(initialProgress);
-
-                      navigator.pop(); // close bottom sheet
                       if (soloMode) {
+                        final startRes = await ApiService.instance.client
+                            .apiQuestRunsPost(
+                              body: QuestRunStartRequest(
+                                questId: widget.quest.id,
+                              ),
+                            );
+
+                        if (!context.mounted) return;
+                        if (!startRes.isSuccessful || startRes.body == null) {
+                          setModalState(() {
+                            isStartingRun = false;
+                          });
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Не удалось запустить квест'),
+                            ),
+                          );
+                          return;
+                        }
+                        final initialProgress = startRes.body!;
+                        final started = await StreamQuestScope.of(
+                          context,
+                        ).startSession(_quest);
+                        if (!context.mounted) return;
+                        if (!started) {
+                          setModalState(() {
+                            isStartingRun = false;
+                          });
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Не удалось включить локальный трекинг',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+                        StreamQuestScope.of(
+                          context,
+                        ).setActiveRunProgress(initialProgress);
+                        navigator.pop(); // close bottom sheet
                         navigator.push(
                           MaterialPageRoute(
                             builder: (_) => const CurrentQuestScreen(),
@@ -286,7 +284,11 @@ class _QuestDataScreenState extends State<QuestDataScreen> {
                         );
                         return;
                       } else {
+                        navigator.pop(); // close bottom sheet
                         if (!context.mounted) return;
+                        setModalState(() {
+                          isStartingRun = false;
+                        });
                         await showModalBottomSheet<void>(
                           context: context,
                           isScrollControlled: true,
@@ -299,6 +301,7 @@ class _QuestDataScreenState extends State<QuestDataScreen> {
                           builder: (_) => TeamWaitingRoomSheet(
                             questId: _quest.id,
                             questTitle: _quest.name,
+                            quest: _quest,
                           ),
                         );
                       }
