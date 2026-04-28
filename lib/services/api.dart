@@ -1,0 +1,146 @@
+import 'dart:async';
+import 'dart:typed_data';
+import 'package:chopper/chopper.dart';
+import 'package:http/http.dart' as http;
+import 'package:techarrow_2026_app/gen/swagger.swagger.dart';
+import 'package:techarrow_2026_app/services/auth.dart';
+
+class ApiService {
+  ApiService._();
+  static final ApiService _instance = ApiService._();
+  static ApiService get instance => _instance;
+
+  late final Swagger _client;
+  late final FutureOr<String?> Function() _getToken;
+  late final StreamAuth _auth;
+  Future<bool>? _refreshInFlight;
+  Swagger get client => _client;
+  static final baseUrl = Uri.http("localhost:8000");
+
+  void init(StreamAuth auth) {
+    _auth = auth;
+    _getToken = () async => auth.accessToken;
+    _client = Swagger.create(
+      baseUrl: baseUrl,
+      interceptors: [AuthInterceptor(getToken: _getToken)],
+    );
+  }
+
+  Future<bool> refreshAccessTokenSingleFlight() {
+    final existing = _refreshInFlight;
+    if (existing != null) return existing;
+    final f = _auth.refreshAccessToken();
+    _refreshInFlight = f;
+    f.whenComplete(() {
+      if (identical(_refreshInFlight, f)) _refreshInFlight = null;
+    });
+    return f;
+  }
+
+  Future<http.Response> createQuest({
+    required BodyCreateQuestApiQuestsPost body,
+    Uint8List? imageBytes,
+  }) async {
+    final token = await _getToken();
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.http('localhost:8000', '/api/quests'),
+    );
+
+    if (token != null && token.isNotEmpty) {
+      request.headers['Authorization'] = 'Bearer $token';
+    }
+    request.fields['title'] = body.title;
+    request.fields['description'] = body.description;
+    request.fields['location'] = body.location;
+    request.fields['difficulty'] = body.difficulty.toString();
+    request.fields['duration_minutes'] = body.durationMinutes.toString();
+    if (body.rulesAndWarnings != null && body.rulesAndWarnings!.isNotEmpty) {
+      request.fields['rules_and_warnings'] = body.rulesAndWarnings!;
+    }
+    if (body.points != null && body.points!.isNotEmpty) {
+      request.fields['points'] = body.points!;
+    }
+    if (imageBytes != null && imageBytes.isNotEmpty) {
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'image',
+          imageBytes,
+          filename: 'cover.jpg',
+        ),
+      );
+    }
+
+    final streamed = await request.send();
+    return http.Response.fromStream(streamed);
+  }
+}
+
+class AuthInterceptor implements Interceptor {
+  final FutureOr<String?> Function() getToken;
+
+  AuthInterceptor({required this.getToken});
+
+  @override
+  FutureOr<Response<BodyType>> intercept<BodyType>(
+    Chain<BodyType> chain,
+  ) async {
+    final originalRequest = chain.request;
+    final isAuthPath = originalRequest.url.path.startsWith('/api/auth');
+    final alreadyRetried = originalRequest.headers['x-auth-retry'] == '1';
+    final token = await getToken();
+
+    if (token != null && token.isNotEmpty) {
+      final res = await chain.proceed(
+        originalRequest.copyWith(
+          headers: {
+            ...originalRequest.headers,
+            'Authorization': 'Bearer $token',
+          },
+        ),
+      );
+      if (res.statusCode == 401 && !isAuthPath && !alreadyRetried) {
+        final refreshed = await ApiService.instance
+            .refreshAccessTokenSingleFlight();
+        if (refreshed) {
+          final newToken = await getToken();
+          if (newToken != null && newToken.isNotEmpty) {
+            return chain.proceed(
+              originalRequest.copyWith(
+                headers: {
+                  ...originalRequest.headers,
+                  'Authorization': 'Bearer $newToken',
+                  'x-auth-retry': '1',
+                },
+              ),
+            );
+          }
+        }
+      }
+      print(res);
+      return res;
+    }
+
+    final res = await chain.proceed(originalRequest);
+    if (res.statusCode == 401 && !isAuthPath && !alreadyRetried) {
+      final refreshed = await ApiService.instance
+          .refreshAccessTokenSingleFlight();
+      if (refreshed) {
+        final newToken = await getToken();
+        if (newToken != null && newToken.isNotEmpty) {
+          return chain.proceed(
+            originalRequest.copyWith(
+              headers: {
+                ...originalRequest.headers,
+                'Authorization': 'Bearer $newToken',
+                'x-auth-retry': '1',
+              },
+            ),
+          );
+        }
+      }
+    }
+    print(res);
+    return res;
+  }
+}
