@@ -183,9 +183,12 @@ class _QuestDataScreenState extends State<QuestDataScreen> {
                         isStartingRun = true;
                       });
 
-                      final startRes = await ApiService.instance.client.apiQuestRunsPost(
-                        body: QuestRunStartRequest(questId: widget.quest.id),
-                      );
+                      final startRes = await ApiService.instance.client
+                          .apiQuestRunsPost(
+                            body: QuestRunStartRequest(
+                              questId: widget.quest.id,
+                            ),
+                          );
                       if (!context.mounted) return;
                       if (!startRes.isSuccessful || startRes.body == null) {
                         setModalState(() {
@@ -201,9 +204,9 @@ class _QuestDataScreenState extends State<QuestDataScreen> {
 
                       final navigator = Navigator.of(context);
                       final surface = Theme.of(context).colorScheme.surface;
-                      final started = await StreamQuestScope.of(context).startSession(
-                        _quest,
-                      );
+                      final started = await StreamQuestScope.of(
+                        context,
+                      ).startSession(_quest);
                       if (!context.mounted) return;
                       if (!started) {
                         setModalState(() {
@@ -211,7 +214,9 @@ class _QuestDataScreenState extends State<QuestDataScreen> {
                         });
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Не удалось включить локальный трекинг'),
+                            content: Text(
+                              'Не удалось включить локальный трекинг',
+                            ),
                           ),
                         );
                         return;
@@ -279,7 +284,7 @@ class _QuestDataScreenState extends State<QuestDataScreen> {
         ),
         title: Text(
           _quest.name,
-          style: tt.titleLarge?.copyWith(
+          style: tt.titleMedium?.copyWith(
             color: cs.onSurface,
             fontWeight: FontWeight.w600,
           ),

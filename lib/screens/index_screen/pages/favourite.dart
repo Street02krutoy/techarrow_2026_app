@@ -101,7 +101,7 @@ class _FavouritePageState extends State<FavouritePage> {
         centerTitle: true,
         title: Text(
           'Мои квесты',
-          style: Theme.of(context).textTheme.titleLarge,
+          style: Theme.of(context).textTheme.titleMedium,
         ),
       ),
       body: SafeArea(

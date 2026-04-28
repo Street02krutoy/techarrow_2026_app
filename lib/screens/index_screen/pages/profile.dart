@@ -25,11 +25,11 @@ class _ProfilePageState extends State<ProfilePage> {
               const SizedBox(height: 20),
               CircleAvatar(
                 radius: 58,
-
+                backgroundColor: colorScheme.surfaceContainerLow,
                 child: Icon(
-                  Icons.person_outline,
+                  Icons.person_outline_rounded,
                   size: 82,
-                  color: colorScheme.primary,
+                  color: colorScheme.onSurfaceVariant,
                 ),
               ),
               const SizedBox(height: 16),
@@ -45,7 +45,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   vertical: 18,
                 ),
                 decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHighest,
+                  color: colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Column(
@@ -62,7 +62,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       child: Row(
                         children: [
                           Icon(
-                            Icons.emoji_events_rounded,
+                            Icons.emoji_events_outlined,
                             color: colorScheme.onSurface,
                           ),
                           const SizedBox(width: 16),
@@ -94,7 +94,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       child: Row(
                         children: [
                           Icon(
-                            Icons.edit_rounded,
+                            Icons.edit_outlined,
                             color: colorScheme.onSurface,
                           ),
                           const SizedBox(width: 16),
@@ -182,7 +182,12 @@ class _AchievementsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Достижения')),
+      appBar: AppBar(
+        title: Text(
+          'Достижения',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+      ),
       body: const Center(child: Text('Скоро')),
     );
   }

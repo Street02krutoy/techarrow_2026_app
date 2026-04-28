@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:typed_data';
 import 'package:techarrow_2026_app/screens/quest_creation/screen.dart';
 
-class QuestCreationStepTwoPage extends StatelessWidget {
+class QuestCreationStepTwoPage extends StatefulWidget {
   const QuestCreationStepTwoPage({
     super.key,
     required this.changePage,
@@ -19,6 +19,30 @@ class QuestCreationStepTwoPage extends StatelessWidget {
   final Uint8List? coverImageBytes;
   final Future<void> Function() onPickCoverImage;
   final VoidCallback onRemoveCoverImage;
+
+  @override
+  State<QuestCreationStepTwoPage> createState() =>
+      _QuestCreationStepTwoPageState();
+}
+
+class _QuestCreationStepTwoPageState extends State<QuestCreationStepTwoPage> {
+  bool get _canProceed => widget.descriptionController.text.trim().isNotEmpty;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.descriptionController.addListener(_refresh);
+  }
+
+  @override
+  void dispose() {
+    widget.descriptionController.removeListener(_refresh);
+    super.dispose();
+  }
+
+  void _refresh() {
+    if (mounted) setState(() {});
+  }
 
   InputDecoration _fieldDecoration(BuildContext context, {String? hint}) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -65,98 +89,115 @@ class QuestCreationStepTwoPage extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           'Создание квеста',
-          style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+          style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
         ),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
-          child: Column(
-            children: [
-              const SizedBox(height: 8),
-              InkWell(
-                onTap: onPickCoverImage,
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  height: 140,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainer,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  alignment: Alignment.center,
-                  child: coverImageBytes == null
-                      ? Text(
-                          'Загрузите обложку 1:1',
-                          style: textTheme.titleSmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight - 28,
+                ),
+                child: IntrinsicHeight(
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 8),
+                      _label(context, 'Обложка'),
+                      InkWell(
+                        onTap: widget.onPickCoverImage,
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          height: 140,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: colorScheme.surfaceContainer,
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                        )
-                      : ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.memory(
-                            coverImageBytes!,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            height: double.infinity,
+                          alignment: Alignment.center,
+                          child: widget.coverImageBytes == null
+                              ? Text(
+                                  'Загрузите обложку 1:1',
+                                  style: textTheme.titleSmall?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                )
+                              : ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Image.memory(
+                                    widget.coverImageBytes!,
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                  ),
+                                ),
+                        ),
+                      ),
+                      if (widget.coverImageBytes != null) ...[
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: widget.onRemoveCoverImage,
+                            child: const Text('Удалить обложку'),
                           ),
                         ),
-                ),
-              ),
-              if (coverImageBytes != null) ...[
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: onRemoveCoverImage,
-                    child: const Text('Удалить обложку'),
+                      ],
+                      const SizedBox(height: 18),
+                      _label(context, 'Описание'),
+                      TextField(
+                        controller: widget.descriptionController,
+                        maxLines: 3,
+                        decoration: _fieldDecoration(
+                          context,
+                          hint: 'Введите описание квеста',
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      _label(context, 'Правила и предупреждения'),
+                      TextField(
+                        controller: widget.rulesController,
+                        maxLines: 3,
+                        decoration: _fieldDecoration(
+                          context,
+                          hint: 'Укажите правила и предупреждения',
+                        ),
+                      ),
+                      const Spacer(),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: colorScheme.secondaryContainer,
+                            foregroundColor: colorScheme.onSecondaryContainer,
+                            minimumSize: const Size.fromHeight(56),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(28),
+                            ),
+                          ),
+                          onPressed: _canProceed
+                              ? () => widget.changePage(
+                                  QuestCreationPageStatus.stepFour,
+                                )
+                              : null,
+                          child: Text(
+                            'Далее',
+                            style: textTheme.titleMedium?.copyWith(
+                              color: colorScheme.onSecondaryContainer,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-              const SizedBox(height: 18),
-              _label(context, 'Описание'),
-              TextField(
-                controller: descriptionController,
-                maxLines: 3,
-                decoration: _fieldDecoration(
-                  context,
-                  hint: 'Добавьте пару слов о вашей команде',
-                ),
               ),
-              const SizedBox(height: 14),
-              _label(context, 'Правила и предупреждения'),
-              TextField(
-                controller: rulesController,
-                maxLines: 3,
-                decoration: _fieldDecoration(
-                  context,
-                  hint: 'Дополнительные правила и предупреждения квеста',
-                ),
-              ),
-              const Spacer(),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: colorScheme.secondaryContainer,
-                    foregroundColor: colorScheme.onSecondaryContainer,
-                    minimumSize: const Size.fromHeight(56),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(28),
-                    ),
-                  ),
-                  onPressed: () => changePage(QuestCreationPageStatus.stepFour),
-                  child: Text(
-                    'Далее',
-                    style: textTheme.titleMedium?.copyWith(
-                      color: colorScheme.onSecondaryContainer,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );

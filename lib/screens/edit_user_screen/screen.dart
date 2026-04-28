@@ -1,5 +1,6 @@
+import 'package:bottom_picker/bottom_picker.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:board_datetime_picker/board_datetime_picker.dart';
 import 'package:techarrow_2026_app/gen/swagger.swagger.dart';
 import 'package:techarrow_2026_app/services/api.dart';
 import 'package:techarrow_2026_app/services/auth.dart';
@@ -88,18 +89,11 @@ class _EditUserScreenState extends State<EditUserScreen> {
         const SizedBox(height: 8),
         GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: () async {
-            final result = await showBoardDateTimeMultiPicker(
-              context: context,
-              pickerType: DateTimePickerType.date,
-              startDate: selectedDate,
-              minimumDate: DateTime(1900),
-              maximumDate: DateTime.now(),
-            );
-            if (result != null) {
-              onDateSelected(result.start);
-            }
-          },
+          onTap: () => _showBirthdatePicker(
+            context,
+            selectedDate: selectedDate,
+            onDateSelected: onDateSelected,
+          ),
           child: Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -128,6 +122,74 @@ class _EditUserScreenState extends State<EditUserScreen> {
         ),
       ],
     );
+  }
+
+  void _showBirthdatePicker(
+    BuildContext context, {
+    required DateTime? selectedDate,
+    required void Function(DateTime) onDateSelected,
+  }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final buttonColor = colorScheme.primary;
+    final now = DateTime.now();
+    final initialDate =
+        selectedDate ?? DateTime(now.year - 16, now.month, now.day);
+
+    BottomPicker.date(
+      dismissable: true,
+      initialDateTime: initialDate,
+      minDateTime: DateTime(1900),
+      maxDateTime: now,
+      dateOrder: DatePickerDateOrder.dmy,
+      backgroundColor: colorScheme.surface,
+      buttonWidth: MediaQuery.of(context).size.width - 40,
+      buttonPadding: 14,
+      buttonSingleColor: buttonColor,
+      pickerThemeData: CupertinoTextThemeData(
+        dateTimePickerTextStyle: theme.textTheme.titleMedium?.copyWith(
+          color: colorScheme.onSurface,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      headerBuilder: (pickerContext) => Padding(
+        padding: const EdgeInsets.only(top: 8, bottom: 4),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Выберите дату рождения',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+            ),
+            IconButton(
+              onPressed: () => Navigator.of(pickerContext).pop(),
+              icon: Icon(Icons.close, color: colorScheme.onSurfaceVariant),
+            ),
+          ],
+        ),
+      ),
+      buttonContent: Text(
+        'Готово',
+        textAlign: TextAlign.center,
+        style: theme.textTheme.labelLarge?.copyWith(
+          color: colorScheme.onPrimary,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      buttonStyle: BoxDecoration(
+        color: buttonColor,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      onSubmit: (date) {
+        if (date is DateTime) {
+          onDateSelected(date);
+        }
+      },
+    ).show(context);
   }
 
   Future<void> _save() async {
@@ -191,7 +253,7 @@ class _EditUserScreenState extends State<EditUserScreen> {
         centerTitle: true,
         title: Text(
           'Редактирование',
-          style: textTheme.titleLarge?.copyWith(
+          style: textTheme.titleMedium?.copyWith(
             color: onSurface,
             fontWeight: FontWeight.w600,
           ),

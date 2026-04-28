@@ -67,7 +67,7 @@ class _QuestHistoryScreenState extends State<QuestHistoryScreen> {
       appBar: AppBar(
         title: Text(
           'История квестов',
-          style: Theme.of(context).textTheme.titleLarge,
+          style: Theme.of(context).textTheme.titleMedium,
         ),
       ),
       body: SafeArea(
@@ -93,10 +93,7 @@ class _QuestHistoryScreenState extends State<QuestHistoryScreen> {
               ),
               itemCount: quests.length,
               itemBuilder: (context, index) {
-                return QuestCard(
-                  quest: quests[index],
-                  onFavorite: (_) {},
-                );
+                return QuestCard(quest: quests[index], onFavorite: (_) {});
               },
             );
           },

@@ -186,7 +186,7 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
             onPressed: () => Navigator.of(context).maybePop(),
           ),
           centerTitle: true,
-          title: const Text('Квест'),
+          title: Text('Квест', style: Theme.of(context).textTheme.titleMedium),
         ),
         body: const Center(child: Text('Нет активного квеста')),
       );
@@ -245,7 +245,7 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
                             ),
                             child: Text(
                               'Квест',
-                              style: textTheme.titleSmall?.copyWith(
+                              style: textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.w600,
                                 color: colorScheme.onSurface,
                               ),
@@ -425,7 +425,12 @@ class _QuestCodeScannerPageState extends State<_QuestCodeScannerPage> {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        title: const Text('Сканирование QR'),
+        title: Text(
+          'Сканирование QR',
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(color: Colors.white),
+        ),
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
       ),
