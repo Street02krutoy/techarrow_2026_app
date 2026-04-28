@@ -4,6 +4,7 @@ import 'package:techarrow_2026_app/models/quest.dart';
 import 'package:techarrow_2026_app/screens/current_quest_screen/screen.dart';
 import 'package:techarrow_2026_app/screens/quest_data/team_waiting_room_sheet.dart';
 import 'package:techarrow_2026_app/services/api.dart';
+import 'package:techarrow_2026_app/services/auth.dart';
 import 'package:techarrow_2026_app/services/quest.dart';
 
 class QuestDataScreen extends StatefulWidget {
@@ -21,6 +22,19 @@ class _QuestDataScreenState extends State<QuestDataScreen> {
   String? _description;
   String? _rulesAndWarnings;
   bool _isLoadingDetail = false;
+  int? _creatorId;
+  bool _isSendingComplaint = false;
+
+  bool get _canStartQuest {
+    final status = _quest.status?.toLowerCase();
+    return status == null || status == 'approved';
+  }
+
+  bool get _canReport {
+    final me = StreamAuthScope.of(context).currentUser;
+    if (me == null || _creatorId == null) return false;
+    return _creatorId != me.id;
+  }
 
   @override
   void initState() {
@@ -42,6 +56,7 @@ class _QuestDataScreenState extends State<QuestDataScreen> {
       setState(() {
         _description = detail.description;
         _rulesAndWarnings = detail.rulesAndWarnings;
+        _creatorId = detail.creator.id;
         _quest = _quest.copyWith(
           checkpointsCount: detail.points.length,
           imageSrc: detail.imageFileId != null
@@ -311,6 +326,137 @@ class _QuestDataScreenState extends State<QuestDataScreen> {
     );
   }
 
+  Future<void> _reportQuest() async {
+    if (_isSendingComplaint) return;
+    final reasonCtrl = TextEditingController();
+    try {
+      final reason = await showModalBottomSheet<String>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (sheetContext) {
+          final cs = Theme.of(sheetContext).colorScheme;
+          final tt = Theme.of(sheetContext).textTheme;
+          return Padding(
+            padding: EdgeInsets.only(
+              left: 16,
+              right: 16,
+              top: 12,
+              bottom: MediaQuery.viewInsetsOf(sheetContext).bottom + 16,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 42,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: cs.outlineVariant,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'Пожаловаться на квест',
+                  textAlign: TextAlign.center,
+                  style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: reasonCtrl,
+                  maxLines: 4,
+                  style: tt.bodyLarge?.copyWith(color: cs.onSurface),
+                  decoration: InputDecoration(
+                    hintText: 'Опишите причину жалобы',
+                    hintStyle: tt.bodyLarge?.copyWith(
+                      color: cs.onSurfaceVariant,
+                    ),
+                    filled: true,
+                    fillColor: cs.surfaceContainerHigh,
+                    contentPadding: const EdgeInsets.all(14),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(color: cs.outline),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: cs.secondaryContainer,
+                      foregroundColor: cs.onSecondaryContainer,
+                      minimumSize: const Size.fromHeight(52),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(28),
+                      ),
+                    ),
+                    onPressed: () =>
+                        Navigator.of(sheetContext).pop(reasonCtrl.text.trim()),
+                    child: Text(
+                      'Отправить',
+                      style: tt.titleMedium?.copyWith(
+                        color: cs.onSecondaryContainer,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+      if (!mounted || reason == null) return;
+      if (reason.isEmpty) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Укажите причину жалобы')));
+        return;
+      }
+      setState(() {
+        _isSendingComplaint = true;
+      });
+      final res = await ApiService.instance.client
+          .apiQuestsQuestIdComplaintsPost(
+            questId: _quest.id,
+            body: QuestComplaintCreateRequest(reason: reason),
+          );
+      if (!mounted) return;
+      if (res.isSuccessful) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Жалоба отправлена')));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Не удалось отправить жалобу')),
+        );
+      }
+    } finally {
+      reasonCtrl.dispose();
+      if (mounted) {
+        setState(() {
+          _isSendingComplaint = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -329,6 +475,14 @@ class _QuestDataScreenState extends State<QuestDataScreen> {
             fontWeight: FontWeight.w600,
           ),
         ),
+        actions: [
+          if (_canReport)
+            IconButton(
+              tooltip: 'Пожаловаться',
+              onPressed: _isSendingComplaint ? null : _reportQuest,
+              icon: const Icon(Icons.flag_outlined),
+            ),
+        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -412,17 +566,30 @@ class _QuestDataScreenState extends State<QuestDataScreen> {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: ElevatedButton(
-                onPressed: () => _showStartQuestSheet(context),
+                onPressed: _canStartQuest
+                    ? () => _showStartQuestSheet(context)
+                    : null,
                 style: ButtonStyle(
-                  backgroundColor: WidgetStatePropertyAll(
-                    Theme.of(context).primaryColorLight,
-                  ),
-                  shadowColor: WidgetStateProperty.all(Colors.transparent),
+                  backgroundColor: WidgetStateProperty.resolveWith((states) {
+                    if (states.contains(WidgetState.disabled)) {
+                      return Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest;
+                    }
+                    return Theme.of(context).primaryColorLight;
+                  }),
+                  foregroundColor: WidgetStateProperty.resolveWith((states) {
+                    if (states.contains(WidgetState.disabled)) {
+                      return Theme.of(context).colorScheme.onSurfaceVariant;
+                    }
+                    return Theme.of(context).colorScheme.onPrimaryContainer;
+                  }),
+                  shadowColor: WidgetStatePropertyAll(Colors.transparent),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Text(
-                    'Начать',
+                    _canStartQuest ? 'Начать' : 'Недоступно',
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                 ),
@@ -493,7 +660,9 @@ class _SummaryCard extends StatelessWidget {
               constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
               icon: Icon(
                 quest.isFavorite ? Icons.favorite : Icons.favorite_border,
-                color: quest.isFavorite ? colorScheme.error : colorScheme.outline,
+                color: quest.isFavorite
+                    ? colorScheme.error
+                    : colorScheme.outline,
               ),
               onPressed: isTogglingFavorite ? null : onToggleFavorite,
             ),

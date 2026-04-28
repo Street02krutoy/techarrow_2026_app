@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:techarrow_2026_app/gen/swagger.swagger.dart';
 import 'package:techarrow_2026_app/models/quest_draft.dart';
 import 'package:techarrow_2026_app/models/quest.dart';
-import 'package:techarrow_2026_app/screens/quest_draft_screen/screen.dart';
+import 'package:techarrow_2026_app/screens/quest_creation/screen.dart';
 import 'package:techarrow_2026_app/services/api.dart';
 import 'package:techarrow_2026_app/services/quest_drafts.dart';
 import 'package:techarrow_2026_app/widgets/event_card.dart';
@@ -130,11 +130,17 @@ class _FavouritePageState extends State<FavouritePage> {
   }
 
   Future<void> _openDraftEditor({QuestDraft? draft}) async {
-    final changed = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => QuestDraftScreen(initialDraft: draft)),
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => QuestCreationScreen(
+          draftMode: true,
+          initialDraft: draft,
+        ),
+      ),
     );
-    if (!mounted || changed != true) return;
+    if (!mounted) return;
     setState(() {
+      _createdFuture = _loadCreated();
       _draftsFuture = _loadDrafts();
     });
   }
@@ -170,6 +176,12 @@ class _FavouritePageState extends State<FavouritePage> {
           style: Theme.of(context).textTheme.titleMedium,
         ),
       ),
+      floatingActionButton: _tab == _MyQuestsTab.created
+          ? FloatingActionButton(
+              onPressed: () => _openDraftEditor(),
+              child: const Icon(Icons.add),
+            )
+          : null,
       body: SafeArea(
         child: Column(
           children: [
@@ -241,16 +253,6 @@ class _FavouritePageState extends State<FavouritePage> {
                         }
                         return CustomScrollView(
                           slivers: [
-                            SliverToBoxAdapter(
-                              child: Padding(
-                                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                                child: ElevatedButton.icon(
-                                  onPressed: () => _openDraftEditor(),
-                                  icon: const Icon(Icons.add),
-                                  label: const Text('Новый черновик'),
-                                ),
-                              ),
-                            ),
                             if (draftItems.isNotEmpty)
                               SliverToBoxAdapter(
                                 child: Padding(
@@ -297,6 +299,7 @@ class _FavouritePageState extends State<FavouritePage> {
                                   final item = remoteItems[index];
                                   return QuestCard(
                                     quest: item.quest,
+                                    showFavourite: false,
                                     onFavorite: (value) async {
                                       await _toggleFavorite(item.quest, value);
                                     },

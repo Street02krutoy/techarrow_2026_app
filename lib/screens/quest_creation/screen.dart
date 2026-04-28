@@ -5,15 +5,24 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:techarrow_2026_app/gen/swagger.swagger.dart';
+import 'package:techarrow_2026_app/models/quest_draft.dart';
 import 'package:techarrow_2026_app/screens/quest_creation/pages/step_one.dart';
 import 'package:techarrow_2026_app/screens/quest_creation/pages/step_three.dart';
 import 'package:techarrow_2026_app/screens/quest_creation/pages/step_two.dart';
 import 'package:techarrow_2026_app/screens/quest_creation/pages/step_four.dart';
 import 'package:techarrow_2026_app/screens/quest_creation/pages/step_five.dart';
 import 'package:techarrow_2026_app/services/api.dart';
+import 'package:techarrow_2026_app/services/quest_drafts.dart';
 
 class QuestCreationScreen extends StatefulWidget {
-  const QuestCreationScreen({super.key});
+  const QuestCreationScreen({
+    super.key,
+    this.initialDraft,
+    this.draftMode = false,
+  });
+
+  final QuestDraft? initialDraft;
+  final bool draftMode;
 
   @override
   State<QuestCreationScreen> createState() => _QuestCreationScreenState();
@@ -41,6 +50,41 @@ class _QuestCreationScreenState extends State<QuestCreationScreen> {
   Uint8List? _coverImageBytes;
   bool _isSubmitting = false;
   final ImagePicker _imagePicker = ImagePicker();
+
+  @override
+  void initState() {
+    super.initState();
+    _hydrateFromDraft();
+  }
+
+  void _hydrateFromDraft() {
+    final draft = widget.initialDraft;
+    if (draft == null) return;
+    _titleController.text = draft.title;
+    _locationController.text = draft.location;
+    _difficultyController.text = draft.difficulty.toString();
+    _durationController.text = draft.durationMinutes.toString();
+    _descriptionController.text = draft.description;
+    _rulesController.text = draft.rulesAndWarnings;
+    if (draft.imageBase64 != null && draft.imageBase64!.isNotEmpty) {
+      _coverImageBytes = base64Decode(draft.imageBase64!);
+    }
+    _checkpoints.clear();
+    _checkpoints.addAll(
+      draft.points.map(
+        (point) => QuestDraftCheckpoint(
+          title: point.title,
+          task: point.task,
+          correctAnswer: point.correctAnswer,
+          hint: point.hint,
+          pointRules: point.pointRules,
+          latitude: point.latitude,
+          longitude: point.longitude,
+        ),
+      ),
+    );
+    checkpointsCount = _checkpoints.length;
+  }
 
   void changePage(QuestCreationPageStatus newStatus) {
     setState(() {
@@ -193,11 +237,14 @@ class _QuestCreationScreenState extends State<QuestCreationScreen> {
         body: body,
         imageBytes: _coverImageBytes,
       );
-      print(response.body);
       if (!mounted) return;
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        Navigator.of(context).pop();
+        if (widget.draftMode && widget.initialDraft != null) {
+          await QuestDraftsService.instance.delete(widget.initialDraft!.id);
+        }
+        if (!mounted) return;
+        Navigator.of(context).pop(true);
         return;
       }
 
@@ -297,28 +344,87 @@ class _QuestCreationScreenState extends State<QuestCreationScreen> {
           rulesAndWarnings: _rulesController.text.trim(),
           checkpointsCount: checkpointsCount,
           isSubmitting: _isSubmitting,
+          onSaveDraft: _saveDraftWithFeedback,
           onSubmit: _submitQuest,
         );
     }
 
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 220),
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
-      transitionBuilder: (child, animation) {
-        return FadeTransition(
-          opacity: animation,
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 0.02),
-              end: Offset.zero,
-            ).animate(animation),
-            child: child,
-          ),
-        );
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (!didPop || !widget.draftMode) return;
+        await _saveDraft();
       },
-      child: currentPage,
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 220),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        transitionBuilder: (child, animation) {
+          return FadeTransition(
+            opacity: animation,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 0.02),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            ),
+          );
+        },
+        child: currentPage,
+      ),
     );
+  }
+
+  Future<void> _saveDraft() async {
+    final hasAnyData =
+        _titleController.text.trim().isNotEmpty ||
+        _locationController.text.trim().isNotEmpty ||
+        _descriptionController.text.trim().isNotEmpty ||
+        _rulesController.text.trim().isNotEmpty ||
+        _checkpoints.isNotEmpty ||
+        _coverImageBytes != null;
+    if (!hasAnyData) return;
+
+    final id =
+        widget.initialDraft?.id ??
+        DateTime.now().millisecondsSinceEpoch.toString();
+    final draft = QuestDraft(
+      id: id,
+      title: _titleController.text.trim(),
+      location: _locationController.text.trim(),
+      difficulty: int.tryParse(_difficultyController.text.trim()) ?? 1,
+      durationMinutes: int.tryParse(_durationController.text.trim()) ?? 0,
+      description: _descriptionController.text.trim(),
+      rulesAndWarnings: _rulesController.text.trim(),
+      checkpointsCount: _checkpoints.length,
+      updatedAtIso: DateTime.now().toIso8601String(),
+      points: _checkpoints
+          .map(
+            (point) => QuestDraftPoint(
+              title: point.title,
+              task: point.task,
+              correctAnswer: point.correctAnswer,
+              hint: point.hint,
+              pointRules: point.pointRules,
+              latitude: point.latitude,
+              longitude: point.longitude,
+            ),
+          )
+          .toList(),
+      imageBase64: _coverImageBytes == null
+          ? null
+          : base64Encode(_coverImageBytes!),
+    );
+    await QuestDraftsService.instance.upsert(draft);
+  }
+
+  Future<void> _saveDraftWithFeedback() async {
+    await _saveDraft();
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Черновик сохранен')));
   }
 }
 

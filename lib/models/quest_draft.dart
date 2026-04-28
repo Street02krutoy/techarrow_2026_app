@@ -9,6 +9,7 @@ class QuestDraft {
     required this.rulesAndWarnings,
     required this.checkpointsCount,
     required this.updatedAtIso,
+    this.points = const <QuestDraftPoint>[],
     this.imageBase64,
   });
 
@@ -21,6 +22,7 @@ class QuestDraft {
   final String rulesAndWarnings;
   final int checkpointsCount;
   final String updatedAtIso;
+  final List<QuestDraftPoint> points;
   final String? imageBase64;
 
   factory QuestDraft.fromJson(Map<String, dynamic> json) {
@@ -34,6 +36,10 @@ class QuestDraft {
       rulesAndWarnings: json['rulesAndWarnings'] as String? ?? '',
       checkpointsCount: json['checkpointsCount'] as int? ?? 0,
       updatedAtIso: json['updatedAtIso'] as String? ?? '',
+      points: ((json['points'] as List?) ?? const <dynamic>[])
+          .whereType<Map>()
+          .map((item) => QuestDraftPoint.fromJson(Map<String, dynamic>.from(item)))
+          .toList(),
       imageBase64: json['imageBase64'] as String?,
     );
   }
@@ -49,6 +55,7 @@ class QuestDraft {
       'rulesAndWarnings': rulesAndWarnings,
       'checkpointsCount': checkpointsCount,
       'updatedAtIso': updatedAtIso,
+      'points': points.map((item) => item.toJson()).toList(),
       'imageBase64': imageBase64,
     };
   }
@@ -63,6 +70,7 @@ class QuestDraft {
     String? rulesAndWarnings,
     int? checkpointsCount,
     String? updatedAtIso,
+    List<QuestDraftPoint>? points,
     String? imageBase64,
   }) {
     return QuestDraft(
@@ -75,7 +83,52 @@ class QuestDraft {
       rulesAndWarnings: rulesAndWarnings ?? this.rulesAndWarnings,
       checkpointsCount: checkpointsCount ?? this.checkpointsCount,
       updatedAtIso: updatedAtIso ?? this.updatedAtIso,
+      points: points ?? this.points,
       imageBase64: imageBase64 ?? this.imageBase64,
     );
+  }
+}
+
+class QuestDraftPoint {
+  const QuestDraftPoint({
+    required this.title,
+    required this.task,
+    required this.correctAnswer,
+    required this.hint,
+    required this.pointRules,
+    required this.latitude,
+    required this.longitude,
+  });
+
+  final String title;
+  final String task;
+  final String correctAnswer;
+  final String hint;
+  final String pointRules;
+  final double latitude;
+  final double longitude;
+
+  factory QuestDraftPoint.fromJson(Map<String, dynamic> json) {
+    return QuestDraftPoint(
+      title: json['title'] as String? ?? '',
+      task: json['task'] as String? ?? '',
+      correctAnswer: json['correctAnswer'] as String? ?? '',
+      hint: json['hint'] as String? ?? '',
+      pointRules: json['pointRules'] as String? ?? '',
+      latitude: (json['latitude'] as num?)?.toDouble() ?? 0,
+      longitude: (json['longitude'] as num?)?.toDouble() ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'title': title,
+      'task': task,
+      'correctAnswer': correctAnswer,
+      'hint': hint,
+      'pointRules': pointRules,
+      'latitude': latitude,
+      'longitude': longitude,
+    };
   }
 }

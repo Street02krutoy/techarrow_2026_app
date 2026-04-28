@@ -178,9 +178,8 @@ class QuestCreationStepFourPage extends StatelessWidget {
                                 ),
                               ),
                               onPressed: isReady
-                                  ? () => changePage(
-                                      QuestCreationPageStatus.stepFive,
-                                    )
+                                  ? () =>
+                                        changePage(QuestCreationPageStatus.stepFive)
                                   : null,
                               child: Text(
                                 'Продолжить',

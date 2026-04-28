@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:chopper/chopper.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -80,6 +81,49 @@ class ApiService {
 
     final streamed = await request.send();
     return http.Response.fromStream(streamed);
+  }
+
+  Future<QuestPageResponse> getQuests({
+    int? limit,
+    int? offset,
+    int? minDurationMinutes,
+    int? maxDurationMinutes,
+    List? difficulties,
+    String? city,
+    num? nearLatitude,
+    num? nearLongitude,
+    String? search,
+  }) async {
+    final token = await _getToken();
+    final params = <String, dynamic>{
+      if (limit != null) 'limit': '$limit',
+      if (offset != null) 'offset': '$offset',
+      if (minDurationMinutes != null)
+        'min_duration_minutes': '$minDurationMinutes',
+      if (maxDurationMinutes != null)
+        'max_duration_minutes': '$maxDurationMinutes',
+      if (difficulties != null && difficulties.isNotEmpty)
+        'difficulties': difficulties.map((e) => '$e').toList(),
+      if (city != null && city.isNotEmpty) 'city': city,
+      if (nearLatitude != null) 'near_latitude': '$nearLatitude',
+      if (nearLongitude != null) 'near_longitude': '$nearLongitude',
+      if (search != null && search.isNotEmpty) 'search': search,
+    };
+    final uri = baseUrl.replace(path: '/api/quests', queryParameters: params);
+    final response = await http.get(
+      uri,
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception('Failed to load quests: ${response.statusCode}');
+    }
+    final body = jsonDecode(response.body);
+    if (body is! Map<String, dynamic>) {
+      throw Exception('Invalid quests response format');
+    }
+    return QuestPageResponse.fromJsonFactory(body);
   }
 }
 

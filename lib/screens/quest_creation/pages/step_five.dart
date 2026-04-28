@@ -13,6 +13,7 @@ class QuestCreationStepFivePage extends StatelessWidget {
     required this.rulesAndWarnings,
     required this.checkpointsCount,
     required this.isSubmitting,
+    required this.onSaveDraft,
     required this.onSubmit,
   });
 
@@ -25,6 +26,7 @@ class QuestCreationStepFivePage extends StatelessWidget {
   final String rulesAndWarnings;
   final int checkpointsCount;
   final bool isSubmitting;
+  final Future<void> Function() onSaveDraft;
   final Future<void> Function() onSubmit;
 
   @override
@@ -93,32 +95,48 @@ class QuestCreationStepFivePage extends StatelessWidget {
                   ),
                 ),
               ),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: colorScheme.secondaryContainer,
-                    foregroundColor: colorScheme.onSecondaryContainer,
-                    minimumSize: const Size.fromHeight(56),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(28),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(56),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(28),
+                        ),
+                      ),
+                      onPressed: isSubmitting ? null : onSaveDraft,
+                      child: const Text('Сохранить черновик'),
                     ),
                   ),
-                  onPressed: isSubmitting ? null : onSubmit,
-                  child: isSubmitting
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(
-                          'Отправить на модерацию',
-                          style: textTheme.titleMedium?.copyWith(
-                            color: colorScheme.onSecondaryContainer,
-                            fontWeight: FontWeight.w600,
-                          ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: colorScheme.secondaryContainer,
+                        foregroundColor: colorScheme.onSecondaryContainer,
+                        minimumSize: const Size.fromHeight(56),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(28),
                         ),
-                ),
+                      ),
+                      onPressed: isSubmitting ? null : onSubmit,
+                      child: isSubmitting
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Text(
+                              'Отправить на модерацию',
+                              style: textTheme.titleMedium?.copyWith(
+                                color: colorScheme.onSecondaryContainer,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

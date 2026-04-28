@@ -97,23 +97,18 @@ class _MainPageState extends State<MainPage> {
     });
 
     try {
-      final searchCity = _searchController.text.trim();
-      final cityFilter = _activeFilters?.city;
-      final response = await ApiService.instance.client.apiQuestsGet(
+      final response = await ApiService.instance.getQuests(
         limit: _pageSize,
         offset: _offset,
         minDurationMinutes: _activeFilters?.minDurationMinutes,
         maxDurationMinutes: _activeFilters?.maxDurationMinutes,
         difficulties: _activeFilters?.difficulties,
-        city: (cityFilter != null && cityFilter.isNotEmpty)
-            ? cityFilter
-            : (searchCity.isEmpty ? null : searchCity),
+        city: _activeFilters?.city,
+        search: _searchController.text.trim().isEmpty
+            ? null
+            : _searchController.text.trim(),
       );
-
-      final body = response.body;
-      if (body == null) {
-        throw Exception('Failed to load quests');
-      }
+      final body = response;
 
       final items = body.items.map(_mapQuest).toList();
       setState(() {
