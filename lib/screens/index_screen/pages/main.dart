@@ -37,12 +37,29 @@ class _MainPageState extends State<MainPage> {
   Timer? _searchDebounce;
   StreamSubscription<TeamQuestRunProgressResponse?>? _teamProgressSub;
   int? _lastNotifiedTeamRunId;
+  bool _questScopeSubscribed = false;
 
   @override
   void initState() {
     super.initState();
     _refreshQuests();
     _searchController.addListener(_onSearchChanged);
+    _scrollController.addListener(() {
+      final scrolled = _scrollController.offset > 0;
+      if (scrolled != _isScrolled) {
+        setState(() {
+          _isScrolled = scrolled;
+        });
+      }
+      _maybeLoadMore();
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_questScopeSubscribed) return;
+    _questScopeSubscribed = true;
     _teamProgressSub = StreamQuestScope.of(
       context,
     ).onActiveTeamRunProgressChanged.listen((progress) {
@@ -53,15 +70,6 @@ class _MainPageState extends State<MainPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Командный квест начался')),
       );
-    });
-    _scrollController.addListener(() {
-      final scrolled = _scrollController.offset > 0;
-      if (scrolled != _isScrolled) {
-        setState(() {
-          _isScrolled = scrolled;
-        });
-      }
-      _maybeLoadMore();
     });
   }
 
