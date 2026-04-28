@@ -2,7 +2,6 @@ import 'package:bottom_picker/bottom_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:techarrow_2026_app/services/auth.dart';
-import 'package:techarrow_2026_app/services/team.dart';
 
 enum _ScreenStates { regFirst, regLast, login }
 
@@ -40,15 +39,11 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
   Future<void> _signIn() async {
     setState(() {});
 
-    final success = await StreamAuthScope.of(
+    await StreamAuthScope.of(
       context,
     ).signIn(_emailController.text, _passwordController.text);
 
     if (!mounted) return;
-
-    if (success) {
-      await StreamTeamScope.of(context).refresh();
-    }
 
     setState(() {});
   }
@@ -58,7 +53,7 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
 
     setState(() {});
 
-    final success = await StreamAuthScope.of(context).signOn(
+    await StreamAuthScope.of(context).signOn(
       _emailController.text,
       _passwordController.text,
       _nicknameController.text,
@@ -66,10 +61,6 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
     );
 
     if (!mounted) return;
-
-    if (success) {
-      await StreamTeamScope.of(context).refresh();
-    }
 
     setState(() {});
   }

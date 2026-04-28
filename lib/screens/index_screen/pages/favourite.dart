@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:techarrow_2026_app/gen/swagger.swagger.dart';
+import 'package:techarrow_2026_app/models/quest_draft.dart';
 import 'package:techarrow_2026_app/models/quest.dart';
+import 'package:techarrow_2026_app/screens/quest_draft_screen/screen.dart';
 import 'package:techarrow_2026_app/services/api.dart';
+import 'package:techarrow_2026_app/services/quest_drafts.dart';
 import 'package:techarrow_2026_app/widgets/event_card.dart';
 import 'package:techarrow_2026_app/gen/swagger.enums.swagger.dart' as enums;
 
@@ -12,6 +15,13 @@ class _CreatedQuestItem {
 
   final Quest quest;
   final enums.QuestStatusSchema status;
+}
+
+class _CreatedTabData {
+  const _CreatedTabData({required this.remote, required this.drafts});
+
+  final List<_CreatedQuestItem> remote;
+  final List<QuestDraft> drafts;
 }
 
 class FavouritePage extends StatefulWidget {
@@ -27,14 +37,15 @@ class _FavouritePageState extends State<FavouritePage> {
 
   late Future<List<Quest>> _favoritesFuture;
   late Future<List<_CreatedQuestItem>> _createdFuture;
+  late Future<List<QuestDraft>> _draftsFuture;
   _MyQuestsTab _tab = _MyQuestsTab.favourites;
-  int? _updatingStatusQuestId;
 
   @override
   void initState() {
     super.initState();
     _favoritesFuture = _loadFavorites();
     _createdFuture = _loadCreated();
+    _draftsFuture = _loadDrafts();
   }
 
   Future<List<Quest>> _loadFavorites() async {
@@ -75,11 +86,22 @@ class _FavouritePageState extends State<FavouritePage> {
               imageSrc: item.imageFileId != null
                   ? "${ApiService.baseUrl.toString()}/api/file/${item.imageFileId}"
                   : _sampleQuestImage,
+              status: _statusLabel(item.status),
             ),
             status: item.status,
           ),
         )
         .toList();
+  }
+
+  Future<List<QuestDraft>> _loadDrafts() {
+    return QuestDraftsService.instance.getAll();
+  }
+
+  Future<_CreatedTabData> _loadCreatedTabData() async {
+    final remote = await _createdFuture;
+    final drafts = await _draftsFuture;
+    return _CreatedTabData(remote: remote, drafts: drafts);
   }
 
   void _setTab(_MyQuestsTab tab) {
@@ -103,6 +125,25 @@ class _FavouritePageState extends State<FavouritePage> {
     setState(() {
       _favoritesFuture = _loadFavorites();
       _createdFuture = _loadCreated();
+      _draftsFuture = _loadDrafts();
+    });
+  }
+
+  Future<void> _openDraftEditor({QuestDraft? draft}) async {
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => QuestDraftScreen(initialDraft: draft)),
+    );
+    if (!mounted || changed != true) return;
+    setState(() {
+      _draftsFuture = _loadDrafts();
+    });
+  }
+
+  Future<void> _deleteDraft(QuestDraft draft) async {
+    await QuestDraftsService.instance.delete(draft.id);
+    if (!mounted) return;
+    setState(() {
+      _draftsFuture = _loadDrafts();
     });
   }
 
@@ -116,17 +157,6 @@ class _FavouritePageState extends State<FavouritePage> {
         return 'Архив';
       default:
         return 'Неизвестно';
-    }
-  }
-
-  enums.QuestArchiveStatusSchema? _nextStatus(enums.QuestStatusSchema status) {
-    switch (status) {
-      case enums.QuestStatusSchema.onModeration:
-        return enums.QuestArchiveStatusSchema.published;
-      case enums.QuestStatusSchema.published:
-        return enums.QuestArchiveStatusSchema.archived;
-      default:
-        return null;
     }
   }
 
@@ -172,7 +202,7 @@ class _FavouritePageState extends State<FavouritePage> {
                                 crossAxisCount: 2,
                                 crossAxisSpacing: 12,
                                 mainAxisSpacing: 12,
-                                childAspectRatio: 0.7,
+                                childAspectRatio: 0.8,
                               ),
                           itemCount: quests.length,
                           itemBuilder: (context, index) {
@@ -193,8 +223,8 @@ class _FavouritePageState extends State<FavouritePage> {
                         );
                       },
                     )
-                  : FutureBuilder<List<_CreatedQuestItem>>(
-                      future: _createdFuture,
+                  : FutureBuilder<_CreatedTabData>(
+                      future: _loadCreatedTabData(),
                       builder: (context, snapshot) {
                         if (snapshot.connectionState != ConnectionState.done) {
                           return const Center(
@@ -202,32 +232,70 @@ class _FavouritePageState extends State<FavouritePage> {
                           );
                         }
 
-                        final items = snapshot.data ?? <_CreatedQuestItem>[];
-                        if (items.isEmpty) {
+                        final remoteItems = snapshot.data?.remote ?? <_CreatedQuestItem>[];
+                        final draftItems = snapshot.data?.drafts ?? <QuestDraft>[];
+                        if (remoteItems.isEmpty && draftItems.isEmpty) {
                           return const Center(
-                            child: Text('Нет созданных квестов'),
+                            child: Text('Нет созданных квестов и черновиков'),
                           );
                         }
-
-                        return GridView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                crossAxisSpacing: 12,
-                                mainAxisSpacing: 12,
-                                childAspectRatio: 0.7,
+                        return CustomScrollView(
+                          slivers: [
+                            SliverToBoxAdapter(
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                                child: ElevatedButton.icon(
+                                  onPressed: () => _openDraftEditor(),
+                                  icon: const Icon(Icons.add),
+                                  label: const Text('Новый черновик'),
+                                ),
                               ),
-                          itemCount: items.length,
-                          itemBuilder: (context, index) {
-                            final item = items[index];
-                            final next = _nextStatus(item.status);
-                            final isUpdating =
-                                _updatingStatusQuestId == item.quest.id;
-                            return Stack(
-                              children: [
-                                Positioned.fill(
-                                  child: QuestCard(
+                            ),
+                            if (draftItems.isNotEmpty)
+                              SliverToBoxAdapter(
+                                child: Padding(
+                                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                                  child: Text(
+                                    'Черновики',
+                                    style: Theme.of(context).textTheme.titleMedium,
+                                  ),
+                                ),
+                              ),
+                            if (draftItems.isNotEmpty)
+                              SliverList.builder(
+                                itemCount: draftItems.length,
+                                itemBuilder: (context, index) {
+                                  final draft = draftItems[index];
+                                  return _DraftCard(
+                                    draft: draft,
+                                    onEdit: () => _openDraftEditor(draft: draft),
+                                    onDelete: () => _deleteDraft(draft),
+                                  );
+                                },
+                              ),
+                            if (remoteItems.isNotEmpty)
+                              SliverToBoxAdapter(
+                                child: Padding(
+                                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                                  child: Text(
+                                    'Опубликованные/на модерации',
+                                    style: Theme.of(context).textTheme.titleMedium,
+                                  ),
+                                ),
+                              ),
+                            SliverPadding(
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              sliver: SliverGrid(
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 2,
+                                      crossAxisSpacing: 12,
+                                      mainAxisSpacing: 12,
+                                      childAspectRatio: 0.7,
+                                    ),
+                                delegate: SliverChildBuilderDelegate((context, index) {
+                                  final item = remoteItems[index];
+                                  return QuestCard(
                                     quest: item.quest,
                                     onFavorite: (value) async {
                                       await _toggleFavorite(item.quest, value);
@@ -238,46 +306,76 @@ class _FavouritePageState extends State<FavouritePage> {
                                         _createdFuture = _loadCreated();
                                       });
                                     },
-                                  ),
-                                ),
-                                Positioned(
-                                  left: 8,
-                                  right: 8,
-                                  bottom: 8,
-                                  child: SizedBox(
-                                    height: 30,
-                                    child: OutlinedButton(
-                                      onPressed: null,
-                                      style: OutlinedButton.styleFrom(
-                                        backgroundColor: Colors.white
-                                            .withValues(alpha: 0.92),
-                                        side: BorderSide(
-                                          color: Theme.of(
-                                            context,
-                                          ).colorScheme.outlineVariant,
-                                        ),
-                                        padding: EdgeInsets.zero,
-                                        textStyle: const TextStyle(
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        isUpdating
-                                            ? 'Сохранение...'
-                                            : _statusLabel(item.status),
-                                        textAlign: TextAlign.center,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
+                                  );
+                                }, childCount: remoteItems.length),
+                              ),
+                            ),
+                          ],
                         );
                       },
                     ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DraftCard extends StatelessWidget {
+  const _DraftCard({
+    required this.draft,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final QuestDraft draft;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: cs.surfaceContainer,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: cs.primaryContainer,
+              child: Icon(Icons.edit_note, color: cs.onPrimaryContainer),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    draft.title.isEmpty ? 'Без названия' : draft.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Черновик • ${draft.location.isEmpty ? 'Город не указан' : draft.location}',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(onPressed: onEdit, icon: const Icon(Icons.edit_outlined)),
+            IconButton(
+              onPressed: onDelete,
+              icon: Icon(Icons.delete_outline, color: cs.error),
             ),
           ],
         ),

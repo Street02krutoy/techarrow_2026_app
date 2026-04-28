@@ -3,7 +3,6 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:techarrow_2026_app/gen/swagger.swagger.dart';
 import 'package:techarrow_2026_app/screens/index_screen/pages/team.dart';
 import 'package:techarrow_2026_app/services/api.dart';
-import 'package:techarrow_2026_app/services/team.dart';
 
 class TeamJoinPage extends StatefulWidget {
   const TeamJoinPage({super.key, required this.changePage});
@@ -38,14 +37,11 @@ class _TeamJoinPageState extends State<TeamJoinPage>
       ).showSnackBar(const SnackBar(content: Text('Введите ID команды')));
       return;
     }
-    final streamTeam = StreamTeamScope.of(context);
     final res = await ApiService.instance.client.apiTeamsJoinPost(
       body: TeamJoinRequest(code: teamId),
     );
     if (!mounted) return;
     if (res.isSuccessful) {
-      await streamTeam.refresh();
-      if (!mounted) return;
       widget.changePage(TeamPageStatus.info);
       return;
     }

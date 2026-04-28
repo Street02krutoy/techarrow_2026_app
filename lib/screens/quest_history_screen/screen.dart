@@ -89,11 +89,15 @@ class _QuestHistoryScreenState extends State<QuestHistoryScreen> {
                 crossAxisCount: 2,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
-                childAspectRatio: 0.7,
+                childAspectRatio: 0.79,
               ),
               itemCount: quests.length,
               itemBuilder: (context, index) {
-                return QuestCard(quest: quests[index], onFavorite: (_) {});
+                return QuestCard(
+                  quest: quests[index],
+                  showFavourite: false,
+                  onFavorite: (_) {},
+                );
               },
             );
           },

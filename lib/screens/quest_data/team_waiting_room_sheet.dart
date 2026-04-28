@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:techarrow_2026_app/gen/swagger.swagger.dart';
 import 'package:techarrow_2026_app/services/api.dart';
 import 'package:techarrow_2026_app/services/auth.dart';
-import 'package:techarrow_2026_app/services/team.dart';
 
 class TeamWaitingRoomSheet extends StatefulWidget {
   const TeamWaitingRoomSheet({
@@ -22,11 +21,25 @@ class _TeamWaitingRoomSheetState extends State<TeamWaitingRoomSheet> {
   bool _isReady = false;
   bool _isUpdating = false;
   TeamQuestRunProgressResponse? _progress;
+  TeamResponse? _team;
 
   @override
   void initState() {
     super.initState();
+    _loadTeam();
     _refreshProgress();
+  }
+
+  Future<void> _loadTeam() async {
+    try {
+      final res = await ApiService.instance.client.apiTeamsMeGet();
+      if (!mounted) return;
+      if (res.isSuccessful && res.body != null) {
+        setState(() {
+          _team = res.body;
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _refreshProgress() async {
@@ -82,7 +95,7 @@ class _TeamWaitingRoomSheetState extends State<TeamWaitingRoomSheet> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
-    final team = StreamTeamScope.of(context).team;
+    final team = _team;
     final me = StreamAuthScope.of(context).currentUser;
     final members = team?.members ?? const <TeamMemberResponse>[];
     final readyIds = _progress?.readyMemberIds ?? const <int>[];

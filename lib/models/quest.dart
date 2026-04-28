@@ -10,6 +10,7 @@ class Quest {
     this.isFavorite = false,
     this.district,
     this.checkpointsCount,
+    this.status,
   });
 
   final int id;
@@ -19,6 +20,7 @@ class Quest {
   final String area;
   final String difficulty;
   final String imageSrc;
+  final String? status;
 
   /// Optional; shown on quest detail when set.
   final String? district;

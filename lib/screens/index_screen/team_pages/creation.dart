@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:techarrow_2026_app/gen/swagger.swagger.dart';
 import 'package:techarrow_2026_app/screens/index_screen/pages/team.dart';
 import 'package:techarrow_2026_app/services/api.dart';
-import 'package:techarrow_2026_app/services/team.dart';
 
 class TeamCreationPage extends StatefulWidget {
   const TeamCreationPage({super.key, required this.changePage});
@@ -41,7 +40,6 @@ class _TeamCreationPageState extends State<TeamCreationPage> {
       return;
     }
 
-    final streamTeam = StreamTeamScope.of(context);
     setState(() => _submitting = true);
     try {
       final res = await ApiService.instance.client.apiTeamsPost(
@@ -50,7 +48,6 @@ class _TeamCreationPageState extends State<TeamCreationPage> {
       if (!mounted) return;
 
       if (res.isSuccessful && res.body != null) {
-        streamTeam.setTeam(res.body!);
         widget.changePage(TeamPageStatus.info);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(

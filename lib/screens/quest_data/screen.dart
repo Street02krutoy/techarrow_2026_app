@@ -356,10 +356,11 @@ class _QuestDataScreenState extends State<QuestDataScreen> {
                   ),
                   const SizedBox(height: 8),
                   Container(
+                    constraints: const BoxConstraints(minHeight: 150),
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: cs.surfaceContainerHigh,
-                      borderRadius: BorderRadius.circular(14),
+                      color: cs.surfaceContainer,
+                      borderRadius: BorderRadius.circular(20),
                     ),
                     child: _isLoadingDetail
                         ? const Center(child: CircularProgressIndicator())
@@ -367,8 +368,9 @@ class _QuestDataScreenState extends State<QuestDataScreen> {
                             (_description != null && _description!.isNotEmpty)
                                 ? _description!
                                 : 'Описание отсутствует',
-                            style: tt.bodyMedium?.copyWith(
+                            style: tt.titleLarge?.copyWith(
                               color: cs.onSurfaceVariant,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                   ),
@@ -382,10 +384,11 @@ class _QuestDataScreenState extends State<QuestDataScreen> {
                   ),
                   const SizedBox(height: 8),
                   Container(
+                    constraints: const BoxConstraints(minHeight: 150),
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: cs.surfaceContainerHigh,
-                      borderRadius: BorderRadius.circular(14),
+                      color: cs.surfaceContainer,
+                      borderRadius: BorderRadius.circular(20),
                     ),
                     child: _isLoadingDetail
                         ? const Center(child: CircularProgressIndicator())
@@ -394,8 +397,9 @@ class _QuestDataScreenState extends State<QuestDataScreen> {
                                     _rulesAndWarnings!.isNotEmpty)
                                 ? _rulesAndWarnings!
                                 : 'Правила и предупреждения отсутствуют',
-                            style: tt.bodyMedium?.copyWith(
+                            style: tt.titleLarge?.copyWith(
                               color: cs.onSurfaceVariant,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                   ),
@@ -452,86 +456,57 @@ class _SummaryCard extends StatelessWidget {
     final checkpoints = quest.checkpointsCount != null
         ? '${quest.checkpointsCount}'
         : '—';
+    final status = quest.status ?? '—';
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(22),
+          child: AspectRatio(
+            aspectRatio: 16 / 9,
             child: Image.network(
               quest.imageSrc,
-              width: 88,
-              height: 88,
               fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Container(
+                color: colorScheme.surfaceContainerHigh,
+                alignment: Alignment.center,
+                child: Icon(Icons.broken_image, color: colorScheme.outline),
+              ),
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        quest.name,
-                        style: textTheme.titleMedium?.copyWith(
-                          color: colorScheme.onSurface,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(
-                        minWidth: 36,
-                        minHeight: 36,
-                      ),
-                      icon: Icon(
-                        quest.isFavorite
-                            ? Icons.favorite
-                            : Icons.favorite_border,
-                        color: quest.isFavorite
-                            ? colorScheme.error
-                            : colorScheme.onSurface,
-                      ),
-                      onPressed: isTogglingFavorite ? null : onToggleFavorite,
-                    ),
-                  ],
+        ),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Характеристики',
+                style: textTheme.headlineSmall?.copyWith(
+                  color: colorScheme.onSurface,
+                  fontWeight: FontWeight.w500,
                 ),
-                const SizedBox(height: 6),
-                _detailLine(
-                  textTheme,
-                  colorScheme,
-                  'Сложность:',
-                  quest.difficulty,
-                ),
-                _detailLine(
-                  textTheme,
-                  colorScheme,
-                  'Длительность:',
-                  quest.duration,
-                ),
-                _detailLine(textTheme, colorScheme, 'Город:', quest.area),
-                _detailLine(textTheme, colorScheme, 'Район:', district),
-                _detailLine(
-                  textTheme,
-                  colorScheme,
-                  'Кол-во чекпоинтов:',
-                  checkpoints,
-                ),
-              ],
+              ),
             ),
-          ),
-        ],
-      ),
+            IconButton(
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              icon: Icon(
+                quest.isFavorite ? Icons.favorite : Icons.favorite_border,
+                color: quest.isFavorite ? colorScheme.error : colorScheme.outline,
+              ),
+              onPressed: isTogglingFavorite ? null : onToggleFavorite,
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        _detailLine(textTheme, colorScheme, 'Сложность:', quest.difficulty),
+        _detailLine(textTheme, colorScheme, 'Длительность:', quest.duration),
+        _detailLine(textTheme, colorScheme, 'Город:', quest.area),
+        _detailLine(textTheme, colorScheme, 'Район:', district),
+        _detailLine(textTheme, colorScheme, 'Кол-во чекпоинтов:', checkpoints),
+        _detailLine(textTheme, colorScheme, 'Статус:', status),
+      ],
     );
   }
 
@@ -540,7 +515,10 @@ class _SummaryCard extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 4),
       child: Text(
         '$label $value',
-        style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+        style: tt.titleLarge?.copyWith(
+          color: cs.onSurfaceVariant,
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }

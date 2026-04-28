@@ -10,9 +10,11 @@ class QuestCard extends StatelessWidget {
     required this.quest,
     required this.onFavorite,
     this.onReturn,
+    this.showFavourite = true,
   });
 
   final Quest quest;
+  final bool showFavourite;
   final void Function(bool value) onFavorite;
   final FutureOr<dynamic> Function()? onReturn;
 
@@ -40,21 +42,20 @@ class QuestCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           color: Colors.grey[300],
         ),
-        child: Stack(
-          clipBehavior: Clip.none,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            ClipRRect(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+              child: Image.network(
+                quest.imageSrc,
+                height: 120,
+                width: double.infinity,
+                fit: BoxFit.fitWidth,
+              ),
+            ),
+            Stack(
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                  child: Image.network(
-                    quest.imageSrc,
-                    height: 120,
-                    width: double.infinity,
-                    fit: BoxFit.fitWidth,
-                  ),
-                ),
                 Padding(
                   padding: const EdgeInsets.all(8),
                   child: Column(
@@ -72,29 +73,30 @@ class QuestCard extends StatelessWidget {
                       Text('Сложность: ${quest.difficulty}'),
                       Text('Длительность: ${quest.duration}'),
                       Text('Город: ${quest.area}'),
+                      if (quest.status != null)
+                        Text(
+                          '${quest.status}',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                     ],
                   ),
                 ),
-              ],
-            ),
-            Positioned(
-              top: 4,
-              right: 4,
-              child: Material(
-                color: Colors.transparent,
-                child: CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Colors.grey[300],
-                  child: IconButton(
-                    padding: EdgeInsets.zero,
-                    onPressed: () => onFavorite(!quest.isFavorite),
-                    icon: Icon(
-                      quest.isFavorite ? Icons.favorite : Icons.favorite_border,
-                      color: quest.isFavorite ? Colors.red : Colors.black,
+                if (showFavourite)
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: () => onFavorite(!quest.isFavorite),
+                      icon: Icon(
+                        quest.isFavorite
+                            ? Icons.favorite
+                            : Icons.favorite_border,
+                        color: quest.isFavorite ? Colors.red : Colors.black,
+                      ),
                     ),
                   ),
-                ),
-              ),
+              ],
             ),
           ],
         ),

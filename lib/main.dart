@@ -6,7 +6,6 @@ import 'package:techarrow_2026_app/screens/auth_screen/screen.dart';
 import 'package:techarrow_2026_app/screens/index_screen/screen.dart';
 import 'package:techarrow_2026_app/services/auth.dart';
 import 'package:techarrow_2026_app/services/quest.dart';
-import 'package:techarrow_2026_app/services/team.dart';
 import 'package:techarrow_2026_app/theme/theme.dart';
 
 Future<void> main() async {
@@ -18,9 +17,7 @@ Future<void> main() async {
   }
   runApp(
     StreamAuthScope(
-      child: StreamQuestScope(
-        child: StreamTeamScope(child: TeamBootstrap(child: const MainApp())),
-      ),
+      child: StreamQuestScope(child: const MainApp()),
     ),
   );
 }

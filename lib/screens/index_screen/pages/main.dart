@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:techarrow_2026_app/gen/swagger.swagger.dart';
 import 'package:techarrow_2026_app/models/quest.dart';
@@ -32,6 +34,7 @@ class _MainPageState extends State<MainPage> {
   bool _isInitialLoading = true;
   bool _isLoadingMore = false;
   String? _loadError;
+  Timer? _searchDebounce;
 
   @override
   void initState() {
@@ -76,6 +79,7 @@ class _MainPageState extends State<MainPage> {
   }
 
   bool get _hasMore => _quests.length < _total;
+  bool get _hasActiveFilters => _activeFilters?.hasAny ?? false;
 
   void _maybeLoadMore() {
     if (!_scrollController.hasClients) return;
@@ -93,13 +97,17 @@ class _MainPageState extends State<MainPage> {
     });
 
     try {
+      final searchCity = _searchController.text.trim();
+      final cityFilter = _activeFilters?.city;
       final response = await ApiService.instance.client.apiQuestsGet(
         limit: _pageSize,
         offset: _offset,
         minDurationMinutes: _activeFilters?.minDurationMinutes,
         maxDurationMinutes: _activeFilters?.maxDurationMinutes,
         difficulties: _activeFilters?.difficulties,
-        city: _activeFilters?.city,
+        city: (cityFilter != null && cityFilter.isNotEmpty)
+            ? cityFilter
+            : (searchCity.isEmpty ? null : searchCity),
       );
 
       final body = response.body;
@@ -126,6 +134,7 @@ class _MainPageState extends State<MainPage> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _scrollController.dispose();
@@ -133,17 +142,25 @@ class _MainPageState extends State<MainPage> {
   }
 
   void _onSearchClose() {
+    _searchDebounce?.cancel();
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.clear();
+    _searchController.addListener(_onSearchChanged);
     setState(() {
-      _searchController.clear();
+      _hasSearchText = false;
     });
+    _refreshQuests();
   }
 
   void _onSearchChanged() {
     final hasText = _searchController.text.isNotEmpty;
-    if (hasText == _hasSearchText) return;
-    setState(() {
-      _hasSearchText = hasText;
-    });
+    if (hasText != _hasSearchText) {
+      setState(() {
+        _hasSearchText = hasText;
+      });
+    }
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 450), _refreshQuests);
   }
 
   Future<void> _openFiltersSheet() async {
@@ -154,7 +171,7 @@ class _MainPageState extends State<MainPage> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
-      builder: (_) => const _MainFiltersSheet(),
+      builder: (_) => _MainFiltersSheet(initialFilters: _activeFilters),
     );
 
     if (!mounted || filters == null) return;
@@ -295,6 +312,10 @@ class _MainPageState extends State<MainPage> {
       padding: const EdgeInsets.all(12),
       child: SearchBar(
         controller: _searchController,
+        onSubmitted: (_) {
+          _searchDebounce?.cancel();
+          _refreshQuests();
+        },
         hintText: "Поиск квестов",
         shadowColor: WidgetStatePropertyAll(Colors.transparent),
         leading: IconButton(
@@ -305,10 +326,14 @@ class _MainPageState extends State<MainPage> {
         trailing: [
           IconButton(
             icon: Icon(
-              _hasSearchText ? Icons.close : Icons.search,
+              (_hasSearchText || _hasActiveFilters)
+                  ? Icons.close
+                  : Icons.search,
               color: Colors.grey[700],
             ),
-            onPressed: _hasSearchText ? _onSearchClose : null,
+            onPressed: (_hasSearchText || _hasActiveFilters)
+                ? _onSearchClose
+                : null,
           ),
         ],
       ),
@@ -423,7 +448,9 @@ class _MainPageState extends State<MainPage> {
 }
 
 class _MainFiltersSheet extends StatefulWidget {
-  const _MainFiltersSheet();
+  const _MainFiltersSheet({this.initialFilters});
+
+  final _QuestFilters? initialFilters;
 
   @override
   State<_MainFiltersSheet> createState() => _MainFiltersSheetState();
@@ -434,6 +461,17 @@ class _MainFiltersSheetState extends State<_MainFiltersSheet> {
   final TextEditingController _minDurationController = TextEditingController();
   final TextEditingController _maxDurationController = TextEditingController();
   int? _difficulty;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initialFilters;
+    if (initial == null) return;
+    _cityController.text = initial.city ?? '';
+    _minDurationController.text = initial.minDurationMinutes?.toString() ?? '';
+    _maxDurationController.text = initial.maxDurationMinutes?.toString() ?? '';
+    _difficulty = initial.singleDifficulty;
+  }
 
   @override
   void dispose() {
@@ -500,11 +538,25 @@ class _MainFiltersSheetState extends State<_MainFiltersSheet> {
             ),
           ),
           const SizedBox(height: 8),
-          TextField(
-            controller: controller,
-            keyboardType: keyboardType,
-            decoration: fieldDecoration(hint: hint),
-            style: textTheme.bodyLarge?.copyWith(color: colorScheme.onSurface),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: controller,
+            builder: (context, value, _) {
+              return TextField(
+                controller: controller,
+                keyboardType: keyboardType,
+                decoration: fieldDecoration(hint: hint).copyWith(
+                  suffixIcon: value.text.isEmpty
+                      ? null
+                      : IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => controller.clear(),
+                        ),
+                ),
+                style: textTheme.bodyLarge?.copyWith(
+                  color: colorScheme.onSurface,
+                ),
+              );
+            },
           ),
         ],
       );
@@ -545,12 +597,22 @@ class _MainFiltersSheetState extends State<_MainFiltersSheet> {
                 const SizedBox(height: 18),
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Сложность',
-                    style: textTheme.labelLarge?.copyWith(
-                      color: colorScheme.onSurface,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  child: Row(
+                    children: [
+                      Text(
+                        'Сложность',
+                        style: textTheme.labelLarge?.copyWith(
+                          color: colorScheme.onSurface,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const Spacer(),
+                      if (_difficulty != null)
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => setState(() => _difficulty = null),
+                        ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -569,6 +631,7 @@ class _MainFiltersSheetState extends State<_MainFiltersSheet> {
                     return DropdownMenuItem<int>(
                       value: value,
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Container(
                             width: 30,
@@ -615,24 +678,50 @@ class _MainFiltersSheetState extends State<_MainFiltersSheet> {
                 Row(
                   children: [
                     Expanded(
-                      child: TextField(
-                        controller: _minDurationController,
-                        keyboardType: TextInputType.number,
-                        decoration: fieldDecoration(hint: 'От'),
-                        style: textTheme.bodyLarge?.copyWith(
-                          color: colorScheme.onSurface,
-                        ),
+                      child: ValueListenableBuilder<TextEditingValue>(
+                        valueListenable: _minDurationController,
+                        builder: (context, value, _) {
+                          return TextField(
+                            controller: _minDurationController,
+                            keyboardType: TextInputType.number,
+                            decoration: fieldDecoration(hint: 'От').copyWith(
+                              suffixIcon: value.text.isEmpty
+                                  ? null
+                                  : IconButton(
+                                      icon: const Icon(Icons.close),
+                                      onPressed: () =>
+                                          _minDurationController.clear(),
+                                    ),
+                            ),
+                            style: textTheme.bodyLarge?.copyWith(
+                              color: colorScheme.onSurface,
+                            ),
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: TextField(
-                        controller: _maxDurationController,
-                        keyboardType: TextInputType.number,
-                        decoration: fieldDecoration(hint: 'До'),
-                        style: textTheme.bodyLarge?.copyWith(
-                          color: colorScheme.onSurface,
-                        ),
+                      child: ValueListenableBuilder<TextEditingValue>(
+                        valueListenable: _maxDurationController,
+                        builder: (context, value, _) {
+                          return TextField(
+                            controller: _maxDurationController,
+                            keyboardType: TextInputType.number,
+                            decoration: fieldDecoration(hint: 'До').copyWith(
+                              suffixIcon: value.text.isEmpty
+                                  ? null
+                                  : IconButton(
+                                      icon: const Icon(Icons.close),
+                                      onPressed: () =>
+                                          _maxDurationController.clear(),
+                                    ),
+                            ),
+                            style: textTheme.bodyLarge?.copyWith(
+                              color: colorScheme.onSurface,
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ],
@@ -699,4 +788,13 @@ class _QuestFilters {
   final int? maxDurationMinutes;
   final List<dynamic>? difficulties;
   final String? city;
+
+  int? get singleDifficulty =>
+      difficulties?.isNotEmpty == true ? difficulties!.first as int? : null;
+
+  bool get hasAny =>
+      minDurationMinutes != null ||
+      maxDurationMinutes != null ||
+      (difficulties?.isNotEmpty ?? false) ||
+      (city?.isNotEmpty ?? false);
 }

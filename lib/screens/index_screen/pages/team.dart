@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:techarrow_2026_app/services/api.dart';
 import 'package:techarrow_2026_app/screens/index_screen/team_pages/creation.dart';
 import 'package:techarrow_2026_app/screens/index_screen/team_pages/join.dart';
 import 'package:techarrow_2026_app/screens/index_screen/team_pages/team.dart';
-import 'package:techarrow_2026_app/services/team.dart';
 
 class TeamPage extends StatefulWidget {
   const TeamPage({super.key});
@@ -13,6 +13,7 @@ class TeamPage extends StatefulWidget {
 
 class _TeamPageState extends State<TeamPage> {
   TeamPageStatus status = TeamPageStatus.join;
+  bool _loadingInitial = true;
 
   void changePage(TeamPageStatus newStatus) {
     setState(() {
@@ -21,9 +22,34 @@ class _TeamPageState extends State<TeamPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _resolveInitialStatus();
+  }
+
+  Future<void> _resolveInitialStatus() async {
+    try {
+      final res = await ApiService.instance.client.apiTeamsMeGet();
+      if (!mounted) return;
+      setState(() {
+        status = (res.isSuccessful && res.body != null)
+            ? TeamPageStatus.info
+            : TeamPageStatus.join;
+        _loadingInitial = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        status = TeamPageStatus.join;
+        _loadingInitial = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (StreamTeamScope.of(context).team != null) {
-      changePage(TeamPageStatus.info);
+    if (_loadingInitial) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     switch (status) {
       case TeamPageStatus.join:
