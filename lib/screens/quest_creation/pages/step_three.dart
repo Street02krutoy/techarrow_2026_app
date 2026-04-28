@@ -154,6 +154,8 @@ class _QuestCreationStepThreePageState
                       point: widget.selectedPoint!,
                       width: 36,
                       height: 36,
+                      rotate: true,
+                      alignment: Alignment.bottomCenter,
                       child: Icon(
                         Icons.location_on,
                         size: 36,

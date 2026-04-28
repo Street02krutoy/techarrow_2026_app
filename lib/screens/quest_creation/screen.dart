@@ -13,6 +13,8 @@ import 'package:techarrow_2026_app/screens/quest_creation/pages/step_four.dart';
 import 'package:techarrow_2026_app/screens/quest_creation/pages/step_five.dart';
 import 'package:techarrow_2026_app/services/api.dart';
 import 'package:techarrow_2026_app/services/quest_drafts.dart';
+import 'package:techarrow_2026_app/util/quest_cover_upload.dart';
+import 'package:techarrow_2026_app/widgets/app_snackbar.dart';
 
 class QuestCreationScreen extends StatefulWidget {
   const QuestCreationScreen({
@@ -182,9 +184,10 @@ class _QuestCreationScreenState extends State<QuestCreationScreen> {
     final picked = await _imagePicker.pickImage(source: ImageSource.gallery);
     if (picked == null) return;
     final bytes = await picked.readAsBytes();
+    final prepared = await prepareQuestCoverForUpload(bytes);
     if (!mounted) return;
     setState(() {
-      _coverImageBytes = bytes;
+      _coverImageBytes = prepared;
     });
   }
 
@@ -261,13 +264,17 @@ class _QuestCreationScreenState extends State<QuestCreationScreen> {
         return;
       }
 
-      ScaffoldMessenger.of(
+      AppSnackBar.serverError(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Не удалось создать квест')));
-    } catch (_) {
+        fallback: 'Не удалось создать квест',
+        response: response,
+      );
+    } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ошибка при отправке квеста')),
+      AppSnackBar.serverError(
+        context,
+        fallback: 'Ошибка при отправке квеста',
+        error: e,
       );
     } finally {
       if (mounted) {
@@ -356,9 +363,7 @@ class _QuestCreationScreenState extends State<QuestCreationScreen> {
     setState(() {
       status = targetStep;
     });
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    AppSnackBar.error(context, message);
   }
 
   @override
@@ -518,9 +523,7 @@ class _QuestCreationScreenState extends State<QuestCreationScreen> {
   Future<void> _saveDraftWithFeedback() async {
     await _saveDraft();
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Черновик сохранен')));
+    AppSnackBar.success(context, 'Черновик сохранен');
   }
 }
 

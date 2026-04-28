@@ -4,6 +4,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:techarrow_2026_app/gen/swagger.swagger.dart';
 import 'package:techarrow_2026_app/screens/index_screen/pages/team.dart';
 import 'package:techarrow_2026_app/services/api.dart';
+import 'package:techarrow_2026_app/widgets/app_snackbar.dart';
 
 class TeamInfoPage extends StatefulWidget {
   const TeamInfoPage({super.key, required this.changePage});
@@ -128,9 +129,7 @@ class _TeamInfoPageState extends State<TeamInfoPage> {
                           InkWell(
                             onTap: () {
                               Clipboard.setData(ClipboardData(text: _teamId));
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text("Скопировано")),
-                              );
+                              AppSnackBar.success(context, 'Скопировано');
                             },
                             child: Text(
                               'ID: $_teamId',

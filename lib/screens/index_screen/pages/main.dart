@@ -8,6 +8,7 @@ import 'package:techarrow_2026_app/screens/current_quest_screen/screen.dart';
 import 'package:techarrow_2026_app/screens/quest_creation/screen.dart';
 import 'package:techarrow_2026_app/services/api.dart';
 import 'package:techarrow_2026_app/services/quest.dart';
+import 'package:techarrow_2026_app/widgets/app_snackbar.dart';
 import 'package:techarrow_2026_app/widgets/event_card.dart';
 
 class MainPage extends StatefulWidget {
@@ -77,6 +78,7 @@ class _MainPageState extends State<MainPage> {
     return Quest(
       id: item.id,
       isFavorite: item.isFavourite ?? false,
+      isCompleted: item.isCompleted ?? false,
       name: item.title,
       duration: '${item.durationMinutes} мин',
       area: item.location,
@@ -84,6 +86,7 @@ class _MainPageState extends State<MainPage> {
       imageSrc: item.imageFileId != null
           ? "${ApiService.baseUrl.toString()}/api/file/${item.imageFileId}"
           : _sampleQuestImage,
+      status: item.status.value,
     );
   }
 
@@ -203,6 +206,7 @@ class _MainPageState extends State<MainPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
+        heroTag: 'main-create-quest-fab',
         onPressed: () {
           Navigator.of(context)
               .push(
@@ -585,9 +589,7 @@ class _MainFiltersSheetState extends State<_MainFiltersSheet> {
         _nearLatitude = null;
         _nearLongitude = null;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Не удалось получить геопозицию')),
-      );
+      AppSnackBar.error(context, 'Не удалось получить геопозицию');
     }
   }
 

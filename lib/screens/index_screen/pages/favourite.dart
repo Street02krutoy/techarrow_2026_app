@@ -57,6 +57,7 @@ class _FavouritePageState extends State<FavouritePage> {
           (item) => Quest(
             id: item.id,
             isFavorite: item.isFavourite ?? true,
+            isCompleted: item.isCompleted ?? false,
             name: item.title,
             duration: '${item.durationMinutes} мин',
             area: item.location,
@@ -64,6 +65,7 @@ class _FavouritePageState extends State<FavouritePage> {
             imageSrc: item.imageFileId != null
                 ? "${ApiService.baseUrl.toString()}/api/file/${item.imageFileId}"
                 : _sampleQuestImage,
+            status: item.status.value,
           ),
         )
         .toList();
@@ -79,6 +81,7 @@ class _FavouritePageState extends State<FavouritePage> {
             quest: Quest(
               id: item.id,
               isFavorite: item.isFavourite ?? false,
+              isCompleted: item.isCompleted ?? false,
               name: item.title,
               duration: '${item.durationMinutes} мин',
               area: item.location,
@@ -86,7 +89,8 @@ class _FavouritePageState extends State<FavouritePage> {
               imageSrc: item.imageFileId != null
                   ? "${ApiService.baseUrl.toString()}/api/file/${item.imageFileId}"
                   : _sampleQuestImage,
-              status: _statusLabel(item.status),
+              status: item.status.value,
+              rejectionReason: item.rejectionReason,
             ),
             status: item.status,
           ),
@@ -132,10 +136,8 @@ class _FavouritePageState extends State<FavouritePage> {
   Future<void> _openDraftEditor({QuestDraft? draft}) async {
     await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-        builder: (_) => QuestCreationScreen(
-          draftMode: true,
-          initialDraft: draft,
-        ),
+        builder: (_) =>
+            QuestCreationScreen(draftMode: true, initialDraft: draft),
       ),
     );
     if (!mounted) return;
@@ -153,19 +155,6 @@ class _FavouritePageState extends State<FavouritePage> {
     });
   }
 
-  String _statusLabel(enums.QuestStatusSchema status) {
-    switch (status) {
-      case enums.QuestStatusSchema.onModeration:
-        return 'На модерации';
-      case enums.QuestStatusSchema.published:
-        return 'Опубликован';
-      case enums.QuestStatusSchema.archived:
-        return 'Архив';
-      default:
-        return 'Неизвестно';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -178,6 +167,7 @@ class _FavouritePageState extends State<FavouritePage> {
       ),
       floatingActionButton: _tab == _MyQuestsTab.created
           ? FloatingActionButton(
+              heroTag: 'favourite-create-draft-fab',
               onPressed: () => _openDraftEditor(),
               child: const Icon(Icons.add),
             )
@@ -214,7 +204,7 @@ class _FavouritePageState extends State<FavouritePage> {
                                 crossAxisCount: 2,
                                 crossAxisSpacing: 12,
                                 mainAxisSpacing: 12,
-                                childAspectRatio: 0.8,
+                                childAspectRatio: 0.7,
                               ),
                           itemCount: quests.length,
                           itemBuilder: (context, index) {
@@ -244,8 +234,10 @@ class _FavouritePageState extends State<FavouritePage> {
                           );
                         }
 
-                        final remoteItems = snapshot.data?.remote ?? <_CreatedQuestItem>[];
-                        final draftItems = snapshot.data?.drafts ?? <QuestDraft>[];
+                        final remoteItems =
+                            snapshot.data?.remote ?? <_CreatedQuestItem>[];
+                        final draftItems =
+                            snapshot.data?.drafts ?? <QuestDraft>[];
                         if (remoteItems.isEmpty && draftItems.isEmpty) {
                           return const Center(
                             child: Text('Нет созданных квестов и черновиков'),
@@ -256,10 +248,17 @@ class _FavouritePageState extends State<FavouritePage> {
                             if (draftItems.isNotEmpty)
                               SliverToBoxAdapter(
                                 child: Padding(
-                                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                                  padding: const EdgeInsets.fromLTRB(
+                                    12,
+                                    8,
+                                    12,
+                                    8,
+                                  ),
                                   child: Text(
                                     'Черновики',
-                                    style: Theme.of(context).textTheme.titleMedium,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleMedium,
                                   ),
                                 ),
                               ),
@@ -270,23 +269,19 @@ class _FavouritePageState extends State<FavouritePage> {
                                   final draft = draftItems[index];
                                   return _DraftCard(
                                     draft: draft,
-                                    onEdit: () => _openDraftEditor(draft: draft),
+                                    onEdit: () =>
+                                        _openDraftEditor(draft: draft),
                                     onDelete: () => _deleteDraft(draft),
                                   );
                                 },
                               ),
-                            if (remoteItems.isNotEmpty)
-                              SliverToBoxAdapter(
-                                child: Padding(
-                                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-                                  child: Text(
-                                    'Опубликованные/на модерации',
-                                    style: Theme.of(context).textTheme.titleMedium,
-                                  ),
-                                ),
-                              ),
                             SliverPadding(
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              padding: EdgeInsets.fromLTRB(
+                                12,
+                                draftItems.isEmpty ? 0 : 8,
+                                12,
+                                0,
+                              ),
                               sliver: SliverGrid(
                                 gridDelegate:
                                     const SliverGridDelegateWithFixedCrossAxisCount(
@@ -295,11 +290,13 @@ class _FavouritePageState extends State<FavouritePage> {
                                       mainAxisSpacing: 12,
                                       childAspectRatio: 0.7,
                                     ),
-                                delegate: SliverChildBuilderDelegate((context, index) {
+                                delegate: SliverChildBuilderDelegate((
+                                  context,
+                                  index,
+                                ) {
                                   final item = remoteItems[index];
                                   return QuestCard(
                                     quest: item.quest,
-                                    showFavourite: false,
                                     onFavorite: (value) async {
                                       await _toggleFavorite(item.quest, value);
                                     },
@@ -375,7 +372,10 @@ class _DraftCard extends StatelessWidget {
                 ],
               ),
             ),
-            IconButton(onPressed: onEdit, icon: const Icon(Icons.edit_outlined)),
+            IconButton(
+              onPressed: onEdit,
+              icon: const Icon(Icons.edit_outlined),
+            ),
             IconButton(
               onPressed: onDelete,
               icon: Icon(Icons.delete_outline, color: cs.error),

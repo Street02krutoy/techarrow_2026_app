@@ -8,6 +8,7 @@ import 'package:techarrow_2026_app/gen/swagger.swagger.dart';
 import 'package:techarrow_2026_app/screens/quest_result_screen/screen.dart';
 import 'package:techarrow_2026_app/services/api.dart';
 import 'package:techarrow_2026_app/services/quest.dart';
+import 'package:techarrow_2026_app/widgets/app_snackbar.dart';
 
 class CurrentQuestScreen extends StatefulWidget {
   const CurrentQuestScreen({super.key});
@@ -18,16 +19,20 @@ class CurrentQuestScreen extends StatefulWidget {
 
 class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
   static const LatLng _fallbackCenter = LatLng(56.3269, 44.0065);
+  static const double _initialCheckpointZoom = 15;
 
+  late final MapController _mapController;
   late final TextEditingController _codeController;
   Timer? _teamProgressPoller;
   bool _isSubmittingCode = false;
   bool _isAbandoning = false;
   int? _lastShownRunResultId;
+  bool _didFitInitialCheckpoint = false;
 
   @override
   void initState() {
     super.initState();
+    _mapController = MapController();
     _codeController = TextEditingController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -38,7 +43,8 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
       _teamProgressPoller = Timer.periodic(const Duration(seconds: 2), (_) {
         if (!mounted) return;
         final state = StreamQuestScope.of(context);
-        if (state.activeSession == null && state.activeTeamRunProgress != null) {
+        if (state.activeSession == null &&
+            state.activeTeamRunProgress != null) {
           state.refreshActiveTeamRunProgress();
         }
       });
@@ -48,8 +54,110 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
   @override
   void dispose() {
     _teamProgressPoller?.cancel();
+    _mapController.dispose();
     _codeController.dispose();
     super.dispose();
+  }
+
+  /// First checkpoint the user should tackle (solo: current or last passed if oddly empty).
+  LatLng? _firstActiveCheckpointLatLng({
+    required bool isTeamMode,
+    required QuestRunProgressResponse? point,
+    required TeamQuestRunProgressResponse? teamProgress,
+  }) {
+    if (isTeamMode) {
+      if (teamProgress == null || teamProgress.checkpoints.isEmpty) {
+        return null;
+      }
+      for (final cp in teamProgress.checkpoints) {
+        if (!cp.isCompleted) {
+          return LatLng(cp.latitude, cp.longitude);
+        }
+      }
+      final last = teamProgress.checkpoints.last;
+      return LatLng(last.latitude, last.longitude);
+    }
+    final cur = point?.currentCheckpoint;
+    if (cur != null) {
+      return LatLng(cur.latitude, cur.longitude);
+    }
+    final prev = point?.previousCheckpoints;
+    if (prev != null && prev.isNotEmpty) {
+      final p = prev.last;
+      return LatLng(p.latitude, p.longitude);
+    }
+    return null;
+  }
+
+  List<Marker> _buildCheckpointMarkers({
+    required bool isTeamMode,
+    required QuestRunProgressResponse? point,
+    required TeamQuestRunProgressResponse? teamProgress,
+    required ColorScheme colorScheme,
+  }) {
+    final activeColor = colorScheme.error;
+    final markers = <Marker>[];
+
+    if (isTeamMode && teamProgress != null) {
+      final list = teamProgress.checkpoints;
+      for (var i = 0; i < list.length; i++) {
+        final cp = list[i];
+        final n = i + 1;
+        final isDone = cp.isCompleted;
+        markers.add(
+          Marker(
+            key: ValueKey<int>(cp.id),
+            point: LatLng(cp.latitude, cp.longitude),
+            width: 48,
+            height: 48,
+            rotate: true,
+            alignment: Alignment.bottomCenter,
+            child: _NumberedCheckpointMarker(
+              number: n,
+              color: isDone ? Colors.green.shade600 : activeColor,
+            ),
+          ),
+        );
+      }
+      return markers;
+    }
+
+    final prev = point?.previousCheckpoints ?? const [];
+    for (var i = 0; i < prev.length; i++) {
+      final cp = prev[i];
+      markers.add(
+        Marker(
+          key: ValueKey<String>('solo-pass-${cp.id}'),
+          point: LatLng(cp.latitude, cp.longitude),
+          width: 48,
+          height: 48,
+          rotate: true,
+          alignment: Alignment.bottomCenter,
+          child: _NumberedCheckpointMarker(
+            number: i + 1,
+            color: Colors.green.shade600,
+          ),
+        ),
+      );
+    }
+    final current = point?.currentCheckpoint;
+    if (current != null) {
+      markers.add(
+        Marker(
+          key: ValueKey<int>(current.id),
+          point: LatLng(current.latitude, current.longitude),
+          width: 48,
+          height: 48,
+          rotate: true,
+          alignment: Alignment.bottomCenter,
+          child: _NumberedCheckpointMarker(
+            number: prev.length + 1,
+            color: activeColor,
+          ),
+        ),
+      );
+    }
+    return markers;
   }
 
   InputDecoration _fieldDecoration(BuildContext context, {String? hint}) {
@@ -114,10 +222,12 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
       questState.stopSession();
       await questState.fetchLatestRunResult(questId: questId, maxAttempts: 5);
       if (!mounted) return;
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Не удалось завершить квест')),
+      AppSnackBar.serverError(
+        context,
+        fallback: 'Не удалось завершить квест',
+        error: e,
       );
     } finally {
       if (mounted) {
@@ -132,9 +242,7 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
     if (_isSubmittingCode) return;
     final answer = _codeController.text.trim();
     if (answer.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Введите код')));
+      AppSnackBar.error(context, 'Введите код');
       return;
     }
 
@@ -156,9 +264,7 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
           }
         }
         if (target == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Все чекпоинты уже пройдены')),
-          );
+          AppSnackBar.info(context, 'Все чекпоинты уже пройдены');
           return;
         }
         final teamRes = await ApiService.instance.client
@@ -172,20 +278,18 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
           if (teamBody.correct) {
             questState.setActiveTeamRunProgress(teamBody.progress);
             _codeController.clear();
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('Ответ принят')));
+            AppSnackBar.success(context, 'Ответ принят');
             if (teamBody.progress.status.value == 'completed') {
               Navigator.of(context).maybePop();
             }
           } else {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('Неверный код')));
+            AppSnackBar.error(context, 'Неверный код');
           }
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Не удалось отправить код')),
+          AppSnackBar.serverError(
+            context,
+            fallback: 'Не удалось отправить код',
+            response: teamRes,
           );
         }
         return;
@@ -200,9 +304,7 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
         if (body.correct) {
           questState.setActiveRunProgress(body.progress);
           _codeController.clear();
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Ответ принят')));
+          AppSnackBar.success(context, 'Ответ принят');
           final statusValue = body.progress.status.value;
           if (statusValue == 'completed' || statusValue == 'abandoned') {
             questState.stopSession();
@@ -213,20 +315,22 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
             if (!mounted) return;
           }
         } else {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Неверный код')));
+          AppSnackBar.error(context, 'Неверный код');
         }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Не удалось отправить код')),
+        AppSnackBar.serverError(
+          context,
+          fallback: 'Не удалось отправить код',
+          response: res,
         );
       }
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
+      AppSnackBar.serverError(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Не удалось отправить код')));
+        fallback: 'Не удалось отправить код',
+        error: e,
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -281,88 +385,45 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
       );
     }
 
+    final markers = _buildCheckpointMarkers(
+      isTeamMode: isTeamMode,
+      point: point,
+      teamProgress: teamProgress,
+      colorScheme: colorScheme,
+    );
+    final focusLatLng = _firstActiveCheckpointLatLng(
+      isTeamMode: isTeamMode,
+      point: point,
+      teamProgress: teamProgress,
+    );
+    if (!_didFitInitialCheckpoint && focusLatLng != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _didFitInitialCheckpoint) return;
+        _mapController.move(focusLatLng, _initialCheckpointZoom);
+        _didFitInitialCheckpoint = true;
+      });
+    }
+
     return Scaffold(
       body: Stack(
         children: [
           FlutterMap(
-            options: const MapOptions(
-              initialCenter: _fallbackCenter,
-              initialZoom: 6,
+            mapController: _mapController,
+            options: MapOptions(
+              initialCenter: focusLatLng ?? _fallbackCenter,
+              initialZoom: focusLatLng != null ? _initialCheckpointZoom : 6,
+              interactionOptions: InteractionOptions(
+                flags: InteractiveFlag.all,
+                cursorKeyboardRotationOptions:
+                    CursorKeyboardRotationOptions.disabled(),
+              ),
             ),
             children: [
               TileLayer(
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.example.techarrow_2026_app',
               ),
-              MarkerLayer(
-                markers: [
-                  ...?point?.previousCheckpoints.map(
-                    (checkpoint) => Marker(
-                      point: LatLng(checkpoint.latitude, checkpoint.longitude),
-                      width: 44,
-                      height: 44,
-                      child: const Icon(
-                        Icons.location_on,
-                        size: 40,
-                        color: Colors.green,
-                      ),
-                    ),
-                  ),
-                  ...?teamProgress?.checkpoints
-                      .where((checkpoint) => checkpoint.isCompleted)
-                      .map(
-                        (checkpoint) => Marker(
-                          point: LatLng(checkpoint.latitude, checkpoint.longitude),
-                          width: 44,
-                          height: 44,
-                          child: const Icon(
-                            Icons.location_on,
-                            size: 40,
-                            color: Colors.green,
-                          ),
-                        ),
-                      ),
-                  if (point?.currentCheckpoint != null)
-                    Marker(
-                      point: LatLng(
-                        point!.currentCheckpoint!.latitude,
-                        point.currentCheckpoint!.longitude,
-                      ),
-                      width: 46,
-                      height: 46,
-                      child: const Icon(
-                        Icons.location_on,
-                        size: 42,
-                        color: Colors.red,
-                      ),
-                    )
-                  else if (teamCurrentCheckpoint != null)
-                    Marker(
-                      point: LatLng(
-                        teamCurrentCheckpoint.latitude,
-                        teamCurrentCheckpoint.longitude,
-                      ),
-                      width: 46,
-                      height: 46,
-                      child: const Icon(
-                        Icons.location_on,
-                        size: 42,
-                        color: Colors.red,
-                      ),
-                    )
-                  else
-                    const Marker(
-                      point: _fallbackCenter,
-                      width: 44,
-                      height: 44,
-                      child: Icon(
-                        Icons.location_on,
-                        size: 40,
-                        color: Colors.red,
-                      ),
-                    ),
-                ],
-              ),
+              MarkerLayer(markers: markers),
             ],
           ),
 
@@ -401,13 +462,7 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
                           ),
                         ),
                       ),
-                      IconButton(
-                        onPressed: () {},
-                        icon: Icon(
-                          Icons.info_outline,
-                          color: colorScheme.onSurface,
-                        ),
-                      ),
+                      const SizedBox(width: 48),
                     ],
                   ),
                 ],
@@ -554,6 +609,46 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Numbered marker; [rotate:true] on [Marker] keeps the pin upright when the map rotates.
+class _NumberedCheckpointMarker extends StatelessWidget {
+  const _NumberedCheckpointMarker({required this.number, required this.color});
+
+  final int number;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = number.toString();
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.topCenter,
+      children: [
+        Icon(Icons.location_on, size: 46, color: color),
+        Positioned(
+          top: 5,
+          child: Container(
+            width: label.length > 1 ? 26 : 20,
+            height: 18,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.all(Radius.circular(8)),
+            ),
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Colors.black87,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

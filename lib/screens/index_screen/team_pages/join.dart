@@ -3,6 +3,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:techarrow_2026_app/gen/swagger.swagger.dart';
 import 'package:techarrow_2026_app/screens/index_screen/pages/team.dart';
 import 'package:techarrow_2026_app/services/api.dart';
+import 'package:techarrow_2026_app/widgets/app_snackbar.dart';
 
 class TeamJoinPage extends StatefulWidget {
   const TeamJoinPage({super.key, required this.changePage});
@@ -32,25 +33,36 @@ class _TeamJoinPageState extends State<TeamJoinPage>
   Future<void> _joinTeam() async {
     final String teamId = _teamIdController.text.trim();
     if (teamId.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Введите ID команды')));
+      AppSnackBar.error(context, 'Введите ID команды');
       return;
     }
-    final res = await ApiService.instance.client.apiTeamsJoinPost(
-      body: TeamJoinRequest(code: teamId),
-    );
-    if (!mounted) return;
-    if (res.isSuccessful) {
-      widget.changePage(TeamPageStatus.info);
-      return;
-    }
+    try {
+      final res = await ApiService.instance.client.apiTeamsJoinPost(
+        body: TeamJoinRequest(code: teamId),
+      );
+      if (!mounted) return;
+      if (res.isSuccessful) {
+        widget.changePage(TeamPageStatus.info);
+        return;
+      }
 
-    if (res.statusCode == 401) {
-      ScaffoldMessenger.of(
+      if (res.statusCode == 401) {
+        AppSnackBar.error(context, 'Неверный ID команды');
+        return;
+      }
+
+      AppSnackBar.serverError(
         context,
-      ).showSnackBar(SnackBar(content: Text("Неверный ID команды")));
-      return;
+        fallback: 'Не удалось присоединиться к команде',
+        response: res,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      AppSnackBar.serverError(
+        context,
+        fallback: 'Ошибка при присоединении к команде',
+        error: e,
+      );
     }
   }
 

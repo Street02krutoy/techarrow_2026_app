@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:techarrow_2026_app/models/quest_draft.dart';
 import 'package:techarrow_2026_app/services/quest_drafts.dart';
+import 'package:techarrow_2026_app/widgets/app_snackbar.dart';
 
 class QuestDraftScreen extends StatefulWidget {
   const QuestDraftScreen({super.key, this.initialDraft});
@@ -73,13 +74,13 @@ class _QuestDraftScreenState extends State<QuestDraftScreen> {
   Future<void> _saveDraft() async {
     final title = _titleController.text.trim();
     if (title.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Введите название квеста')));
+      AppSnackBar.error(context, 'Введите название квеста');
       return;
     }
     final now = DateTime.now().toIso8601String();
-    final id = widget.initialDraft?.id ?? DateTime.now().millisecondsSinceEpoch.toString();
+    final id =
+        widget.initialDraft?.id ??
+        DateTime.now().millisecondsSinceEpoch.toString();
     final draft = QuestDraft(
       id: id,
       title: title,
@@ -102,7 +103,11 @@ class _QuestDraftScreenState extends State<QuestDraftScreen> {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.initialDraft == null ? 'Новый черновик' : 'Редактирование черновика'),
+        title: Text(
+          widget.initialDraft == null
+              ? 'Новый черновик'
+              : 'Редактирование черновика',
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -120,7 +125,10 @@ class _QuestDraftScreenState extends State<QuestDraftScreen> {
                         ? Container(
                             color: cs.surfaceContainerHigh,
                             alignment: Alignment.center,
-                            child: const Icon(Icons.add_a_photo_outlined, size: 32),
+                            child: const Icon(
+                              Icons.add_a_photo_outlined,
+                              size: 32,
+                            ),
                           )
                         : Image.memory(_imageBytes!, fit: BoxFit.cover),
                   ),
@@ -132,21 +140,39 @@ class _QuestDraftScreenState extends State<QuestDraftScreen> {
               Row(
                 children: [
                   Expanded(
-                    child: _field('Сложность', _difficultyController, isNumber: true),
+                    child: _field(
+                      'Сложность',
+                      _difficultyController,
+                      isNumber: true,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _field('Длительность (мин)', _durationController, isNumber: true),
+                    child: _field(
+                      'Длительность (мин)',
+                      _durationController,
+                      isNumber: true,
+                    ),
                   ),
                 ],
               ),
-              _field('Кол-во чекпоинтов', _checkpointsController, isNumber: true),
+              _field(
+                'Кол-во чекпоинтов',
+                _checkpointsController,
+                isNumber: true,
+              ),
               const SizedBox(height: 8),
               _sectionTitle('Описание'),
-              _multiline(_descriptionController, hint: 'Добавьте описание квеста'),
+              _multiline(
+                _descriptionController,
+                hint: 'Добавьте описание квеста',
+              ),
               const SizedBox(height: 16),
               _sectionTitle('Правила и предупреждения'),
-              _multiline(_rulesController, hint: 'Добавьте правила и предупреждения'),
+              _multiline(
+                _rulesController,
+                hint: 'Добавьте правила и предупреждения',
+              ),
             ],
           ),
         ),
@@ -160,7 +186,9 @@ class _QuestDraftScreenState extends State<QuestDraftScreen> {
               backgroundColor: Theme.of(context).primaryColorLight,
               foregroundColor: cs.onPrimaryContainer,
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(30),
+              ),
             ),
             child: const Text('Сохранить черновик'),
           ),

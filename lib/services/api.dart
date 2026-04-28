@@ -4,8 +4,10 @@ import 'dart:typed_data';
 import 'package:chopper/chopper.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:techarrow_2026_app/gen/swagger.swagger.dart';
 import 'package:techarrow_2026_app/services/auth.dart';
+import 'package:techarrow_2026_app/util/quest_cover_upload.dart';
 
 class ApiService {
   ApiService._();
@@ -49,6 +51,7 @@ class ApiService {
     required BodyCreateQuestApiQuestsPost body,
     Uint8List? imageBytes,
   }) async {
+    final uploadImage = await prepareQuestCoverForUpload(imageBytes);
     final token = await _getToken();
     final request = http.MultipartRequest(
       'POST',
@@ -69,12 +72,13 @@ class ApiService {
     if (body.points != null && body.points!.isNotEmpty) {
       request.fields['points'] = body.points!;
     }
-    if (imageBytes != null && imageBytes.isNotEmpty) {
+    if (uploadImage != null && uploadImage.isNotEmpty) {
       request.files.add(
         http.MultipartFile.fromBytes(
           'image',
-          imageBytes,
+          uploadImage,
           filename: 'cover.jpg',
+          contentType: MediaType('image', 'jpeg'),
         ),
       );
     }

@@ -47,14 +47,16 @@ class QuestCreationStepFourPage extends StatelessWidget {
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.example.techarrow_2026_app',
               ),
-              MarkerLayer(
-                markers: List.generate(checkpoints.length, (index) {
-                  final point = checkpoints[index];
-                  return Marker(
-                    point: LatLng(point.latitude, point.longitude),
-                    width: 44,
-                    height: 44,
-                    child: GestureDetector(
+                MarkerLayer(
+                  markers: List.generate(checkpoints.length, (index) {
+                    final point = checkpoints[index];
+                    return Marker(
+                      point: LatLng(point.latitude, point.longitude),
+                      width: 44,
+                      height: 44,
+                      rotate: true,
+                      alignment: Alignment.bottomCenter,
+                      child: GestureDetector(
                       onTap: () => onCheckpointTap(index),
                       child: _NumberedCheckpointMarker(
                         number: index + 1,

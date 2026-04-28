@@ -4,6 +4,7 @@ import 'package:techarrow_2026_app/models/quest.dart';
 import 'package:techarrow_2026_app/screens/current_quest_screen/screen.dart';
 import 'package:techarrow_2026_app/services/api.dart';
 import 'package:techarrow_2026_app/services/auth.dart';
+import 'package:techarrow_2026_app/widgets/app_snackbar.dart';
 import 'dart:async';
 
 class TeamWaitingRoomSheet extends StatefulWidget {
@@ -66,8 +67,9 @@ class _TeamWaitingRoomSheetState extends State<TeamWaitingRoomSheet> {
         final me = StreamAuthScope.of(context).currentUser;
         setState(() {
           _progress = res.body;
-          _isReady =
-              me != null ? res.body!.readyMemberIds.contains(me.id) : _isReady;
+          _isReady = me != null
+              ? res.body!.readyMemberIds.contains(me.id)
+              : _isReady;
         });
         if (!_navigatedToRun &&
             res.body!.status.value == 'in_progress' &&
@@ -75,11 +77,9 @@ class _TeamWaitingRoomSheetState extends State<TeamWaitingRoomSheet> {
           _navigatedToRun = true;
           _pollTimer?.cancel();
           Navigator.of(context).pop();
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => const CurrentQuestScreen(),
-            ),
-          );
+          Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const CurrentQuestScreen()));
         }
       }
     } catch (_) {}
@@ -104,14 +104,18 @@ class _TeamWaitingRoomSheetState extends State<TeamWaitingRoomSheet> {
           _progress = res.body;
         });
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Не удалось обновить статус')),
+        AppSnackBar.serverError(
+          context,
+          fallback: 'Не удалось обновить статус',
+          response: res,
         );
       }
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Не удалось обновить статус')),
+      AppSnackBar.serverError(
+        context,
+        fallback: 'Не удалось обновить статус',
+        error: e,
       );
     } finally {
       if (mounted) {
@@ -135,9 +139,8 @@ class _TeamWaitingRoomSheetState extends State<TeamWaitingRoomSheet> {
     final countdownSec = startsAt?.difference(now).inSeconds.clamp(0, 9999);
     final statusLabel = switch (_progress?.status.value) {
       'waiting_for_team' => 'Ожидаем готовность всех участников',
-      'starting' => countdownSec == null
-          ? 'Запуск...'
-          : 'Запуск через $countdownSec сек',
+      'starting' =>
+        countdownSec == null ? 'Запуск...' : 'Запуск через $countdownSec сек',
       'in_progress' => 'Квест уже запущен',
       'completed' => 'Квест завершен',
       _ => 'Ожидание',

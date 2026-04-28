@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:techarrow_2026_app/gen/swagger.swagger.dart';
 import 'package:techarrow_2026_app/services/api.dart';
 import 'package:techarrow_2026_app/services/auth.dart';
+import 'package:techarrow_2026_app/widgets/app_snackbar.dart';
 
 /// Profile edit: nickname, date of birth, email, password — layout per design mock.
 class EditUserScreen extends StatefulWidget {
@@ -196,15 +197,11 @@ class _EditUserScreenState extends State<EditUserScreen> {
     if (_isSaving) return;
     final username = _nicknameCtrl.text.trim();
     if (username.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Введите никнейм')));
+      AppSnackBar.error(context, 'Введите никнейм');
       return;
     }
     if (_birthdate == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Выберите дату рождения')));
+      AppSnackBar.error(context, 'Выберите дату рождения');
       return;
     }
 
@@ -223,14 +220,18 @@ class _EditUserScreenState extends State<EditUserScreen> {
         Navigator.of(context).maybePop();
         return;
       }
-      ScaffoldMessenger.of(
+      AppSnackBar.serverError(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Не удалось сохранить')));
-    } catch (_) {
+        fallback: 'Не удалось сохранить',
+        response: res,
+      );
+    } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
+      AppSnackBar.serverError(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Не удалось сохранить')));
+        fallback: 'Не удалось сохранить',
+        error: e,
+      );
     } finally {
       if (mounted) {
         setState(() {

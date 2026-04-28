@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:techarrow_2026_app/gen/swagger.swagger.dart';
 import 'package:techarrow_2026_app/screens/index_screen/pages/team.dart';
 import 'package:techarrow_2026_app/services/api.dart';
+import 'package:techarrow_2026_app/widgets/app_snackbar.dart';
 
 class TeamCreationPage extends StatefulWidget {
   const TeamCreationPage({super.key, required this.changePage});
@@ -28,15 +29,11 @@ class _TeamCreationPageState extends State<TeamCreationPage> {
     final name = _nameController.text.trim();
     final description = _descriptionController.text.trim();
     if (name.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Введите название команды')));
+      AppSnackBar.error(context, 'Введите название команды');
       return;
     }
     if (description.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Введите описание команды')));
+      AppSnackBar.error(context, 'Введите описание команды');
       return;
     }
 
@@ -50,20 +47,19 @@ class _TeamCreationPageState extends State<TeamCreationPage> {
       if (res.isSuccessful && res.body != null) {
         widget.changePage(TeamPageStatus.info);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Не удалось создать команду'
-              '${res.error != null ? ' (${res.error})' : ''}',
-            ),
-          ),
+        AppSnackBar.serverError(
+          context,
+          fallback: 'Не удалось создать команду',
+          response: res,
         );
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
+      AppSnackBar.serverError(
         context,
-      ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+        fallback: 'Ошибка при создании команды',
+        error: e,
+      );
     } finally {
       if (mounted) {
         setState(() => _submitting = false);

@@ -8,19 +8,25 @@ class Quest {
     required this.difficulty,
     required this.imageSrc,
     this.isFavorite = false,
+    this.isCompleted = false,
     this.district,
     this.checkpointsCount,
     this.status,
+    this.rejectionReason,
   });
 
   final int id;
   final bool isFavorite;
+  final bool isCompleted;
   final String name;
   final String duration;
   final String area;
   final String difficulty;
   final String imageSrc;
   final String? status;
+
+  /// Moderator comment when [status] is `rejected`.
+  final String? rejectionReason;
 
   /// Optional; shown on quest detail when set.
   final String? district;
@@ -31,6 +37,7 @@ class Quest {
   Quest copyWith({
     int? id,
     bool? isFavorite,
+    bool? isCompleted,
     String? name,
     String? duration,
     String? area,
@@ -38,10 +45,13 @@ class Quest {
     String? imageSrc,
     String? district,
     int? checkpointsCount,
+    String? status,
+    String? rejectionReason,
   }) {
     return Quest(
       id: id ?? this.id,
       isFavorite: isFavorite ?? this.isFavorite,
+      isCompleted: isCompleted ?? this.isCompleted,
       name: name ?? this.name,
       duration: duration ?? this.duration,
       area: area ?? this.area,
@@ -49,6 +59,8 @@ class Quest {
       imageSrc: imageSrc ?? this.imageSrc,
       district: district ?? this.district,
       checkpointsCount: checkpointsCount ?? this.checkpointsCount,
+      status: status ?? this.status,
+      rejectionReason: rejectionReason ?? this.rejectionReason,
     );
   }
 
@@ -58,11 +70,14 @@ class Quest {
         other is Quest &&
             other.id == id &&
             other.isFavorite == isFavorite &&
+            other.isCompleted == isCompleted &&
             other.name == name &&
             other.duration == duration &&
             other.area == area &&
             other.difficulty == difficulty &&
             other.imageSrc == imageSrc &&
+            other.status == status &&
+            other.rejectionReason == rejectionReason &&
             other.district == district &&
             other.checkpointsCount == checkpointsCount;
   }
@@ -71,11 +86,14 @@ class Quest {
   int get hashCode => Object.hash(
     id,
     isFavorite,
+    isCompleted,
     name,
     duration,
     area,
     difficulty,
     imageSrc,
+    status,
+    rejectionReason,
     district,
     checkpointsCount,
   );

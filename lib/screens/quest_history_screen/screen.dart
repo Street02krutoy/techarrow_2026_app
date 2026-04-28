@@ -41,6 +41,7 @@ class _QuestHistoryScreenState extends State<QuestHistoryScreen> {
           quest: Quest(
             id: h.questId,
             isFavorite: false,
+            isCompleted: isCompleted,
             name: h.questTitle,
             duration: '',
             area: '',
@@ -55,6 +56,7 @@ class _QuestHistoryScreenState extends State<QuestHistoryScreen> {
         quest: Quest(
           id: item.id,
           isFavorite: item.isFavourite ?? false,
+          isCompleted: item.isCompleted ?? isCompleted,
           name: item.title,
           duration: '${item.durationMinutes} мин',
           area: item.location,
@@ -107,6 +109,7 @@ class _QuestHistoryScreenState extends State<QuestHistoryScreen> {
                     QuestCard(
                       quest: entry.quest,
                       showFavourite: false,
+                      showCompletedBadge: false,
                       onFavorite: (_) {},
                     ),
                     Positioned(
