@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -18,6 +20,7 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
   static const LatLng _fallbackCenter = LatLng(56.3269, 44.0065);
 
   late final TextEditingController _codeController;
+  Timer? _teamProgressPoller;
   bool _isSubmittingCode = false;
   bool _isAbandoning = false;
   int? _lastShownRunResultId;
@@ -28,12 +31,23 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
     _codeController = TextEditingController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      StreamQuestScope.of(context).refreshActiveRunProgress(maxAttempts: 5);
+      final questState = StreamQuestScope.of(context);
+      questState.refreshActiveRunProgress(maxAttempts: 5);
+      questState.refreshActiveTeamRunProgress();
+      _teamProgressPoller?.cancel();
+      _teamProgressPoller = Timer.periodic(const Duration(seconds: 2), (_) {
+        if (!mounted) return;
+        final state = StreamQuestScope.of(context);
+        if (state.activeSession == null && state.activeTeamRunProgress != null) {
+          state.refreshActiveTeamRunProgress();
+        }
+      });
     });
   }
 
   @override
   void dispose() {
+    _teamProgressPoller?.cancel();
     _codeController.dispose();
     super.dispose();
   }
@@ -128,6 +142,55 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
       _isSubmittingCode = true;
     });
     try {
+      final questState = StreamQuestScope.of(context);
+      final isTeamMode =
+          questState.activeSession == null &&
+          questState.activeTeamRunProgress != null;
+      if (isTeamMode) {
+        final teamProgress = questState.activeTeamRunProgress!;
+        TeamQuestRunCheckpointView? target;
+        for (final checkpoint in teamProgress.checkpoints) {
+          if (!checkpoint.isCompleted) {
+            target = checkpoint;
+            break;
+          }
+        }
+        if (target == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Все чекпоинты уже пройдены')),
+          );
+          return;
+        }
+        final teamRes = await ApiService.instance.client
+            .apiTeamQuestRunsActiveCheckpointsCheckpointIdAnswerPost(
+              checkpointId: target.id,
+              body: TeamQuestRunCheckpointAnswerRequest(answer: answer),
+            );
+        if (!mounted) return;
+        final teamBody = teamRes.body;
+        if (teamRes.isSuccessful && teamBody != null) {
+          if (teamBody.correct) {
+            questState.setActiveTeamRunProgress(teamBody.progress);
+            _codeController.clear();
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Ответ принят')));
+            if (teamBody.progress.status.value == 'completed') {
+              Navigator.of(context).maybePop();
+            }
+          } else {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Неверный код')));
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Не удалось отправить код')),
+          );
+        }
+        return;
+      }
+
       final res = await ApiService.instance.client.apiQuestRunsActiveAnswerPost(
         body: QuestRunAnswerRequest(answer: answer),
       );
@@ -135,7 +198,6 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
       final body = res.body;
       if (res.isSuccessful && body != null) {
         if (body.correct) {
-          final questState = StreamQuestScope.of(context);
           questState.setActiveRunProgress(body.progress);
           _codeController.clear();
           ScaffoldMessenger.of(
@@ -181,6 +243,17 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
     final questStream = StreamQuestScope.of(context);
     final session = questStream.activeSession;
     final point = questStream.activeRunProgress;
+    final teamProgress = questStream.activeTeamRunProgress;
+    TeamQuestRunCheckpointView? teamCurrentCheckpoint;
+    if (teamProgress != null) {
+      for (final checkpoint in teamProgress.checkpoints) {
+        if (!checkpoint.isCompleted) {
+          teamCurrentCheckpoint = checkpoint;
+          break;
+        }
+      }
+    }
+    final isTeamMode = session == null && teamProgress != null;
     final runResult = questStream.lastRunResult;
     if (runResult != null && _lastShownRunResultId != runResult.runId) {
       _lastShownRunResultId = runResult.runId;
@@ -194,7 +267,7 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
       });
     }
 
-    if (session == null) {
+    if (session == null && !isTeamMode) {
       return Scaffold(
         appBar: AppBar(
           leading: IconButton(
@@ -235,11 +308,39 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
                       ),
                     ),
                   ),
+                  ...?teamProgress?.checkpoints
+                      .where((checkpoint) => checkpoint.isCompleted)
+                      .map(
+                        (checkpoint) => Marker(
+                          point: LatLng(checkpoint.latitude, checkpoint.longitude),
+                          width: 44,
+                          height: 44,
+                          child: const Icon(
+                            Icons.location_on,
+                            size: 40,
+                            color: Colors.green,
+                          ),
+                        ),
+                      ),
                   if (point?.currentCheckpoint != null)
                     Marker(
                       point: LatLng(
                         point!.currentCheckpoint!.latitude,
                         point.currentCheckpoint!.longitude,
+                      ),
+                      width: 46,
+                      height: 46,
+                      child: const Icon(
+                        Icons.location_on,
+                        size: 42,
+                        color: Colors.red,
+                      ),
+                    )
+                  else if (teamCurrentCheckpoint != null)
+                    Marker(
+                      point: LatLng(
+                        teamCurrentCheckpoint.latitude,
+                        teamCurrentCheckpoint.longitude,
                       ),
                       width: 46,
                       height: 46,
@@ -291,7 +392,7 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
                               borderRadius: BorderRadius.circular(100),
                             ),
                             child: Text(
-                              'Квест',
+                              isTeamMode ? 'Командный квест' : 'Квест',
                               style: textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.w600,
                                 color: colorScheme.onSurface,
@@ -354,7 +455,9 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
                         readOnly: true,
                         decoration: _fieldDecoration(
                           context,
-                          hint: point?.currentCheckpoint?.title ?? "Н/Д",
+                          hint: isTeamMode
+                              ? (teamCurrentCheckpoint?.title ?? 'Н/Д')
+                              : (point?.currentCheckpoint?.title ?? "Н/Д"),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -365,7 +468,9 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
                         maxLines: 10,
                         decoration: _fieldDecoration(
                           context,
-                          hint: point?.currentCheckpoint?.task ?? "Н/Д",
+                          hint: isTeamMode
+                              ? (teamCurrentCheckpoint?.task ?? 'Н/Д')
+                              : (point?.currentCheckpoint?.task ?? "Н/Д"),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -419,26 +524,28 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
                         ],
                       ),
 
-                      const SizedBox(height: 16),
-                      OutlinedButton(
-                        onPressed: _isAbandoning ? null : _endQuestEarly,
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 18),
-                          side: BorderSide(color: colorScheme.outline),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
+                      if (!isTeamMode) ...[
+                        const SizedBox(height: 16),
+                        OutlinedButton(
+                          onPressed: _isAbandoning ? null : _endQuestEarly,
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 18),
+                            side: BorderSide(color: colorScheme.outline),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                          ),
+                          child: Text(
+                            _isAbandoning
+                                ? 'Завершение...'
+                                : 'Досрочно завершить квест',
+                            style: textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: colorScheme.onSurface,
+                            ),
                           ),
                         ),
-                        child: Text(
-                          _isAbandoning
-                              ? 'Завершение...'
-                              : 'Досрочно завершить квест',
-                          style: textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: colorScheme.onSurface,
-                          ),
-                        ),
-                      ),
+                      ],
                     ],
                   ),
                 ),

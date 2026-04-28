@@ -1,4 +1,9 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:techarrow_2026_app/gen/swagger.swagger.dart';
 import 'package:techarrow_2026_app/models/quest.dart';
 import 'package:techarrow_2026_app/screens/current_quest_screen/screen.dart';
@@ -24,10 +29,15 @@ class _QuestDataScreenState extends State<QuestDataScreen> {
   bool _isLoadingDetail = false;
   int? _creatorId;
   bool _isSendingComplaint = false;
+  bool _isExportingPdf = false;
 
   bool get _canStartQuest {
     final status = _quest.status?.toLowerCase();
-    return status == null || status == 'approved';
+    final questState = StreamQuestScope.of(context);
+    final hasActiveRun =
+        questState.activeSession != null ||
+        questState.activeTeamRunProgress != null;
+    return (status == null || status == 'approved') && !hasActiveRun;
   }
 
   bool get _canReport {
@@ -460,6 +470,62 @@ class _QuestDataScreenState extends State<QuestDataScreen> {
     }
   }
 
+  Future<void> _downloadQuestPdf() async {
+    if (_isExportingPdf) return;
+    if (kIsWeb) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Скачивание PDF на web не поддерживается'),
+        ),
+      );
+      return;
+    }
+    setState(() {
+      _isExportingPdf = true;
+    });
+    try {
+      final res = await ApiService.instance.client.apiQuestsQuestIdExportGet(
+        questId: _quest.id,
+      );
+      final bytes = res.bodyBytes;
+      if (!mounted) return;
+      if (!res.isSuccessful || bytes.isEmpty) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Не удалось скачать PDF')));
+        return;
+      }
+
+      final dir = await getApplicationDocumentsDirectory();
+      final safeName = _quest.name
+          .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_')
+          .replaceAll(' ', '_');
+      final file = File('${dir.path}/quest_${_quest.id}_$safeName.pdf');
+      await file.writeAsBytes(bytes, flush: true);
+
+      if (!mounted) return;
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path, mimeType: 'application/pdf')],
+          subject: 'Экспорт квеста',
+          text: 'Экспорт квеста "${_quest.name}"',
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Не удалось скачать PDF')));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isExportingPdf = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -479,6 +545,17 @@ class _QuestDataScreenState extends State<QuestDataScreen> {
           ),
         ),
         actions: [
+          IconButton(
+            tooltip: 'Скачать PDF',
+            onPressed: _isExportingPdf ? null : _downloadQuestPdf,
+            icon: _isExportingPdf
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.picture_as_pdf_outlined),
+          ),
           if (_canReport)
             IconButton(
               tooltip: 'Пожаловаться',
@@ -487,117 +564,143 @@ class _QuestDataScreenState extends State<QuestDataScreen> {
             ),
         ],
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: Stack(
         children: [
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _SummaryCard(
-                    colorScheme: cs,
-                    textTheme: tt,
-                    quest: _quest,
-                    isTogglingFavorite: _isTogglingFavorite,
-                    onToggleFavorite: _toggleFavorite,
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Описание',
-                    style: tt.titleMedium?.copyWith(
-                      color: cs.onSurface,
-                      fontWeight: FontWeight.w600,
+          Padding(
+            padding: const EdgeInsets.only(bottom: 48.0),
+            child: Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 40,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _SummaryCard(
+                      colorScheme: cs,
+                      textTheme: tt,
+                      quest: _quest,
+                      isTogglingFavorite: _isTogglingFavorite,
+                      onToggleFavorite: _toggleFavorite,
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    constraints: const BoxConstraints(minHeight: 150),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: cs.surfaceContainer,
-                      borderRadius: BorderRadius.circular(20),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Описание',
+                      style: tt.titleMedium?.copyWith(
+                        color: cs.onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                    child: _isLoadingDetail
-                        ? const Center(child: CircularProgressIndicator())
-                        : Text(
-                            (_description != null && _description!.isNotEmpty)
-                                ? _description!
-                                : 'Описание отсутствует',
-                            style: tt.titleLarge?.copyWith(
-                              color: cs.onSurfaceVariant,
-                              fontWeight: FontWeight.w500,
+                    const SizedBox(height: 8),
+                    Container(
+                      constraints: const BoxConstraints(minHeight: 150),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: cs.surfaceContainer,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: _isLoadingDetail
+                          ? const Center(child: CircularProgressIndicator())
+                          : Text(
+                              (_description != null && _description!.isNotEmpty)
+                                  ? _description!
+                                  : 'Описание отсутствует',
+                              style: tt.bodyLarge?.copyWith(
+                                color: cs.onSurfaceVariant,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                          ),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Правила и предупреждения',
-                    style: tt.titleMedium?.copyWith(
-                      color: cs.onSurface,
-                      fontWeight: FontWeight.w600,
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    constraints: const BoxConstraints(minHeight: 150),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: cs.surfaceContainer,
-                      borderRadius: BorderRadius.circular(20),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Правила и предупреждения',
+                      style: tt.titleMedium?.copyWith(
+                        color: cs.onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                    child: _isLoadingDetail
-                        ? const Center(child: CircularProgressIndicator())
-                        : Text(
-                            (_rulesAndWarnings != null &&
-                                    _rulesAndWarnings!.isNotEmpty)
-                                ? _rulesAndWarnings!
-                                : 'Правила и предупреждения отсутствуют',
-                            style: tt.titleLarge?.copyWith(
-                              color: cs.onSurfaceVariant,
-                              fontWeight: FontWeight.w500,
+                    const SizedBox(height: 8),
+                    Container(
+                      constraints: const BoxConstraints(minHeight: 150),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: cs.surfaceContainer,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: _isLoadingDetail
+                          ? const Center(child: CircularProgressIndicator())
+                          : Text(
+                              (_rulesAndWarnings != null &&
+                                      _rulesAndWarnings!.isNotEmpty)
+                                  ? _rulesAndWarnings!
+                                  : 'Правила и предупреждения отсутствуют',
+                              style: tt.bodyLarge?.copyWith(
+                                color: cs.onSurfaceVariant,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                          ),
-                  ),
-                  const SizedBox(height: 24),
-                ],
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                ),
               ),
             ),
           ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: ElevatedButton(
-                onPressed: _canStartQuest
-                    ? () => _showStartQuestSheet(context)
-                    : null,
-                style: ButtonStyle(
-                  backgroundColor: WidgetStateProperty.resolveWith((states) {
-                    if (states.contains(WidgetState.disabled)) {
-                      return Theme.of(
-                        context,
-                      ).colorScheme.surfaceContainerHighest;
-                    }
-                    return Theme.of(context).primaryColorLight;
-                  }),
-                  foregroundColor: WidgetStateProperty.resolveWith((states) {
-                    if (states.contains(WidgetState.disabled)) {
-                      return Theme.of(context).colorScheme.onSurfaceVariant;
-                    }
-                    return Theme.of(context).colorScheme.onPrimaryContainer;
-                  }),
-                  shadowColor: WidgetStatePropertyAll(Colors.transparent),
-                ),
+          Column(
+            children: [
+              Spacer(),
+              SafeArea(
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(
-                    _canStartQuest ? 'Начать' : 'Недоступно',
-                    style: Theme.of(context).textTheme.titleLarge,
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _canStartQuest
+                              ? () => _showStartQuestSheet(context)
+                              : null,
+                          style: ButtonStyle(
+                            backgroundColor: WidgetStateProperty.resolveWith((
+                              states,
+                            ) {
+                              if (states.contains(WidgetState.disabled)) {
+                                return Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHighest;
+                              }
+                              return Theme.of(context).primaryColorLight;
+                            }),
+                            foregroundColor: WidgetStateProperty.resolveWith((
+                              states,
+                            ) {
+                              if (states.contains(WidgetState.disabled)) {
+                                return Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant;
+                              }
+                              return Theme.of(
+                                context,
+                              ).colorScheme.onPrimaryContainer;
+                            }),
+                            shadowColor: WidgetStatePropertyAll(
+                              Colors.transparent,
+                            ),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Text(
+                              _canStartQuest ? 'Начать' : 'Идет другой квест',
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-            ),
+            ],
           ),
         ],
       ),
@@ -652,9 +755,9 @@ class _SummaryCard extends StatelessWidget {
             Expanded(
               child: Text(
                 'Характеристики',
-                style: textTheme.headlineSmall?.copyWith(
+                style: textTheme.titleLarge?.copyWith(
                   color: colorScheme.onSurface,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
@@ -687,7 +790,7 @@ class _SummaryCard extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 4),
       child: Text(
         '$label $value',
-        style: tt.titleLarge?.copyWith(
+        style: tt.bodyLarge?.copyWith(
           color: cs.onSurfaceVariant,
           fontWeight: FontWeight.w500,
         ),

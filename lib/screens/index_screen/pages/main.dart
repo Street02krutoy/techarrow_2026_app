@@ -61,17 +61,16 @@ class _MainPageState extends State<MainPage> {
     super.didChangeDependencies();
     if (_questScopeSubscribed) return;
     _questScopeSubscribed = true;
-    _teamProgressSub = StreamQuestScope.of(context)
-        .onActiveTeamRunProgressChanged
-        .listen((progress) {
-          if (!mounted || progress == null) return;
-          if (progress.status.value != 'in_progress') return;
-          if (_lastNotifiedTeamRunId == progress.runId) return;
-          _lastNotifiedTeamRunId = progress.runId;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Командный квест начался')),
-          );
-        });
+    final questState = StreamQuestScope.of(context);
+    _teamProgressSub = questState.onActiveTeamRunProgressChanged.listen((
+      progress,
+    ) {
+      if (!mounted || progress == null) return;
+      if (progress.status.value != 'in_progress') return;
+      if (_lastNotifiedTeamRunId == progress.runId) return;
+      _lastNotifiedTeamRunId = progress.runId;
+    });
+    unawaited(questState.refreshActiveTeamRunProgress());
   }
 
   Quest _mapQuest(QuestResponse item) {
@@ -223,7 +222,8 @@ class _MainPageState extends State<MainPage> {
         controller: _scrollController,
         slivers: [
           const SliverToBoxAdapter(child: SizedBox(height: 12)),
-          if (StreamQuestScope.of(context).activeSession != null)
+          if (StreamQuestScope.of(context).activeSession != null ||
+              StreamQuestScope.of(context).activeTeamRunProgress != null)
             SliverToBoxAdapter(child: buildHeaderCard(context)),
           const SliverToBoxAdapter(child: SizedBox(height: 6)),
           if (_isInitialLoading)
@@ -374,8 +374,19 @@ class _MainPageState extends State<MainPage> {
   }
 
   Widget buildHeaderCard(BuildContext context) {
-    final quest = StreamQuestScope.of(context).activeSession!;
-    final progress = StreamQuestScope.of(context).activeRunProgress;
+    final questState = StreamQuestScope.of(context);
+    final quest = questState.activeSession;
+    final progress = questState.activeRunProgress;
+    final teamProgress = questState.activeTeamRunProgress;
+    final isTeam = quest == null && teamProgress != null;
+    final totalSegments = isTeam
+        ? teamProgress.totalCheckpoints
+        : (progress?.totalCheckpoints ?? 4);
+    final completedSegments = isTeam
+        ? teamProgress.completedCheckpoints
+        : (progress?.currentStepIndex ?? 1);
+    final safeTotalSegments = totalSegments <= 0 ? 1 : totalSegments;
+    final safeCurrentSegment = completedSegments.clamp(0, safeTotalSegments);
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -410,15 +421,27 @@ class _MainPageState extends State<MainPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(quest.name, style: TextStyle(fontSize: 18)),
-                  SizedBox(height: 8),
-                  _buildSegmentedProgressBar(
-                    totalSegments: progress?.totalCheckpoints ?? 4,
-                    currentSegment: progress?.currentStepIndex ?? 1,
+                  Text(
+                    isTeam ? 'Командный квест' : (quest?.name ?? 'Квест'),
+                    style: TextStyle(fontSize: 18),
                   ),
                   SizedBox(height: 8),
-                  Text("Количество шагов: ${quest.steps}"),
-                  Text("Пройденное время: ${formatDurationHms(quest.elapsed)}"),
+                  _buildSegmentedProgressBar(
+                    totalSegments: safeTotalSegments,
+                    currentSegment: safeCurrentSegment,
+                  ),
+                  SizedBox(height: 8),
+                  if (isTeam) ...[
+                    Text(
+                      "Готово чекпоинтов: ${teamProgress.completedCheckpoints}/${teamProgress.totalCheckpoints}",
+                    ),
+                    Text("Количество шагов: ${quest?.steps ?? 0}"),
+                  ] else ...[
+                    Text("Количество шагов: ${quest?.steps ?? 0}"),
+                    Text(
+                      "Пройденное время: ${formatDurationHms(quest?.elapsed ?? Duration.zero)}",
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -489,8 +512,10 @@ class _MainFiltersSheetState extends State<_MainFiltersSheet> {
     super.initState();
     final initial = widget.initialFilters;
     if (initial != null) {
-      _minDurationController.text = initial.minDurationMinutes?.toString() ?? '';
-      _maxDurationController.text = initial.maxDurationMinutes?.toString() ?? '';
+      _minDurationController.text =
+          initial.minDurationMinutes?.toString() ?? '';
+      _maxDurationController.text =
+          initial.maxDurationMinutes?.toString() ?? '';
       _difficulty = initial.singleDifficulty;
       _nearMe = initial.nearMe;
       _nearLatitude = initial.nearLatitude;

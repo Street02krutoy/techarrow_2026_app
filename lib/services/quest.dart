@@ -214,8 +214,28 @@ class StreamQuest with WidgetsBindingObserver {
     }
   }
 
+  Future<void> refreshActiveTeamRunProgress() async {
+    // While solo run is active, ignore team progress updates.
+    if (_activeQuestId != null) return;
+    try {
+      final res = await ApiService.instance.client.apiTeamQuestRunsActiveGet();
+      final body = res.body;
+      if (res.isSuccessful && body != null) {
+        _teamProgressController?.add(body);
+      } else {
+        _teamProgressController?.add(null);
+      }
+    } catch (_) {
+      // keep previous value on transient failures
+    }
+  }
+
   void setActiveRunProgress(QuestRunProgressResponse progress) {
     _progressController?.add(progress);
+  }
+
+  void setActiveTeamRunProgress(TeamQuestRunProgressResponse progress) {
+    _teamProgressController?.add(progress);
   }
 
   @override
