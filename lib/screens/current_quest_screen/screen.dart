@@ -25,13 +25,21 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
   static const double _sheetMinChildFraction = 0.18;
   static const double _sheetMaxCapFraction = 0.88;
 
+  /// Pushes the focused checkpoint above the map center so the pin stays visible when
+  /// the bottom sheet is expanded ([MapController.move]: negative `dy` moves the point up).
+  static Offset _checkpointFocusOffsetAboveSheet(BuildContext context) {
+    final h = MediaQuery.sizeOf(context).height;
+    final dy = (h * 0.17).clamp(72.0, 200.0);
+    return Offset(0, -dy);
+  }
+
   late final MapController _mapController;
   late final TextEditingController _codeController;
   Timer? _teamProgressPoller;
   bool _isSubmittingCode = false;
   bool _isAbandoning = false;
   int? _lastShownRunResultId;
-  bool _didFitInitialCheckpoint = false;
+  int? _lastMapFocusCheckpointId;
   /// In team mode, any incomplete checkpoint can be answered; user picks via map.
   int? _selectedTeamCheckpointId;
   Map<int, String> _teamMemberNames = {};
@@ -127,8 +135,45 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
     super.dispose();
   }
 
-  /// First checkpoint the user should tackle (solo: current or last passed if oddly empty).
-  LatLng? _firstActiveCheckpointLatLng({
+  /// Map center = checkpoint the user should answer next (solo: API current; team: [ _targetTeamCheckpointForAnswer ]).
+  LatLng? _mapFocusTargetLatLng({
+    required bool isTeamMode,
+    required QuestRunProgressResponse? point,
+    required TeamQuestRunProgressResponse? teamProgress,
+  }) {
+    final id = _mapFocusTargetCheckpointId(
+      isTeamMode: isTeamMode,
+      point: point,
+      teamProgress: teamProgress,
+    );
+    if (id == null) return null;
+    if (isTeamMode && teamProgress != null) {
+      for (final c in teamProgress.checkpoints) {
+        if (c.id == id) {
+          return LatLng(c.latitude, c.longitude);
+        }
+      }
+      return switch (teamProgress.checkpoints) {
+        [] => null,
+        final cs => LatLng(cs.last.latitude, cs.last.longitude),
+      };
+    }
+    final cur = point?.currentCheckpoint;
+    if (cur != null && cur.id == id) {
+      return LatLng(cur.latitude, cur.longitude);
+    }
+    final prev = point?.previousCheckpoints;
+    if (prev != null) {
+      for (final p in prev) {
+        if (p.id == id) {
+          return LatLng(p.latitude, p.longitude);
+        }
+      }
+    }
+    return null;
+  }
+
+  int? _mapFocusTargetCheckpointId({
     required bool isTeamMode,
     required QuestRunProgressResponse? point,
     required TeamQuestRunProgressResponse? teamProgress,
@@ -137,21 +182,15 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
       if (teamProgress == null || teamProgress.checkpoints.isEmpty) {
         return null;
       }
-      final shown = _displayedTeamCheckpoint(teamProgress);
-      if (shown != null) {
-        return LatLng(shown.latitude, shown.longitude);
-      }
-      final last = teamProgress.checkpoints.last;
-      return LatLng(last.latitude, last.longitude);
+      final target = _targetTeamCheckpointForAnswer(teamProgress);
+      if (target != null) return target.id;
+      return teamProgress.checkpoints.last.id;
     }
     final cur = point?.currentCheckpoint;
-    if (cur != null) {
-      return LatLng(cur.latitude, cur.longitude);
-    }
+    if (cur != null) return cur.id;
     final prev = point?.previousCheckpoints;
     if (prev != null && prev.isNotEmpty) {
-      final p = prev.last;
-      return LatLng(p.latitude, p.longitude);
+      return prev.last.id;
     }
     return null;
   }
@@ -161,6 +200,7 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
     required QuestRunProgressResponse? point,
     required TeamQuestRunProgressResponse? teamProgress,
     required ColorScheme colorScheme,
+    required Offset mapFocusOffset,
   }) {
     final activeColor = colorScheme.error;
     final markers = <Marker>[];
@@ -197,6 +237,7 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
                 _mapController.move(
                   LatLng(cp.latitude, cp.longitude),
                   _mapController.camera.zoom,
+                  offset: mapFocusOffset,
                 );
               },
               child: _NumberedCheckpointMarker(
@@ -416,6 +457,11 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
           if (teamBody.correct) {
             questState.setActiveTeamRunProgress(teamBody.progress);
             _codeController.clear();
+            if (_selectedTeamCheckpointId == target.id) {
+              setState(() {
+                _selectedTeamCheckpointId = null;
+              });
+            }
             if (teamBody.progress.status.value == 'completed') {
               final pts =
                   teamBody.pointsEarned ?? teamBody.progress.pointsAwarded;
@@ -573,22 +619,35 @@ class _CurrentQuestScreenState extends State<CurrentQuestScreen> {
       );
     }
 
+    final mapFocusOffset = _checkpointFocusOffsetAboveSheet(context);
     final markers = _buildCheckpointMarkers(
       isTeamMode: isTeamMode,
       point: point,
       teamProgress: teamProgress,
       colorScheme: colorScheme,
+      mapFocusOffset: mapFocusOffset,
     );
-    final focusLatLng = _firstActiveCheckpointLatLng(
+    final focusLatLng = _mapFocusTargetLatLng(
       isTeamMode: isTeamMode,
       point: point,
       teamProgress: teamProgress,
     );
-    if (!_didFitInitialCheckpoint && focusLatLng != null) {
+    final focusCheckpointId = _mapFocusTargetCheckpointId(
+      isTeamMode: isTeamMode,
+      point: point,
+      teamProgress: teamProgress,
+    );
+    if (focusLatLng != null &&
+        focusCheckpointId != null &&
+        focusCheckpointId != _lastMapFocusCheckpointId) {
+      _lastMapFocusCheckpointId = focusCheckpointId;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || _didFitInitialCheckpoint) return;
-        _mapController.move(focusLatLng, _initialCheckpointZoom);
-        _didFitInitialCheckpoint = true;
+        if (!mounted) return;
+        _mapController.move(
+          focusLatLng,
+          _initialCheckpointZoom,
+          offset: mapFocusOffset,
+        );
       });
     }
 
