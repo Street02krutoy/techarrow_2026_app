@@ -292,7 +292,7 @@ class _QuestDataScreenState extends State<QuestDataScreen> {
 
         return Padding(
           padding: EdgeInsets.only(
-            bottom: MediaQuery.paddingOf(sheetContext).bottom + 16,
+            bottom: MediaQuery.paddingOf(sheetContext).bottom + 24,
             left: 16,
             right: 16,
             top: 12,
@@ -389,7 +389,7 @@ class _QuestDataScreenState extends State<QuestDataScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 12),
                   ElevatedButton(
                     onPressed: () async {
                       if (isStartingRun) return;
@@ -816,7 +816,7 @@ class _QuestDataScreenState extends State<QuestDataScreen> {
                 const Spacer(),
                 SafeArea(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                     child: Row(
                       children: [
                         Expanded(
